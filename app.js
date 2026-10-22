@@ -210,8 +210,8 @@ function matchCard(c, m) {
   };
   return `<div class="match"><div class="court"><span><small>Court</small><b>${m.court}</b></span></div>${side(A, sa, sb)}${side(B, sb, sa)}</div>`;
 }
-function roundBlock(c, r, list) {
-  return `<div class="round"><div class="round-h"><b>Round ${r}</b><span>·</span><span class="num">${roundTime(c, r)}</span></div>${list.map(m => matchCard(c, m)).join("")}</div>`;
+function roundBlock(c, r, list, isNext) {
+  return `<div class="round${isNext ? " next" : ""}"><div class="round-h">${isNext ? '<span class="chip upcoming">Up next</span>' : ""}<b>Round ${r}</b><span>·</span><span class="num">${roundTime(c, r)}</span></div>${list.map(m => matchCard(c, m)).join("")}</div>`;
 }
 function renderComp(id) {
   if (!S.compsReady || !S.playersReady) { app.innerHTML = header(SITE, "", { back: "#/" }) + `<div class="loading">Loading…</div>`; return; }
@@ -234,34 +234,31 @@ function renderComp(id) {
   });
   h += `</tbody></table></div></div></section>`;
 
-  h += `<section id="next" class="next"><div class="sec-h"><h2>Up next</h2>${nextR ? `<span>Round ${nextR} of ${R}</span>` : ""}</div>`;
-  h += nextR ? roundBlock(c, nextR, byRound[nextR].filter(m => !played(m))) : `<div class="empty">All games played. Check the table for the final standings.</div>`;
+  h += `<section id="fixtures"><div class="sec-h"><h2>Fixtures</h2><span>${nextR ? `Round ${nextR} of ${R} next` : "Games still to play"}</span></div>`;
+  let any = false;
+  for (let r = 1; r <= R; r++) { const l = (byRound[r] || []).filter(m => !played(m)); if (l.length) { any = true; h += roundBlock(c, r, l, r === nextR); } }
+  if (!any) h += `<div class="empty">All games played. Check the table for the final standings.</div>`;
   h += `</section>`;
 
   h += `<section id="results"><div class="sec-h"><h2>Results</h2><span>Latest first</span></div>`;
-  let any = false;
+  any = false;
   for (let r = R; r >= 1; r--) { const l = (byRound[r] || []).filter(played); if (l.length) { any = true; h += roundBlock(c, r, l); } }
   if (!any) h += `<div class="empty">No scores yet. Results appear here as soon as they are entered.</div>`;
-  h += `</section>`;
 
-  h += `<section id="fixtures"><div class="sec-h"><h2>Fixtures</h2><span>Games still to play</span></div>`;
-  any = false;
-  for (let r = 1; r <= R; r++) { const l = (byRound[r] || []).filter(m => !played(m)); if (l.length) { any = true; h += roundBlock(c, r, l); } }
-  if (!any) h += `<div class="empty">No games left to play.</div>`;
   h += `</section></main>`;
 
   const nav = (t, icon, label) => `<button data-t="${t}"><span class="pill"><span class="ms" aria-hidden="true">${icon}</span></span>${label}</button>`;
-  h += `<nav class="nav" aria-label="Sections"><div class="nav-in">${nav("table", "leaderboard", "Table")}${nav("next", "sports_tennis", "Up next")}${nav("results", "task_alt", "Results")}${nav("fixtures", "calendar_month", "Fixtures")}</div></nav>`;
+  h += `<nav class="nav" aria-label="Sections"><div class="nav-in">${nav("table", "leaderboard", "Table")}${nav("fixtures", "calendar_month", "Fixtures")}${nav("results", "task_alt", "Results")}</div></nav>`;
 
   const y = scrollY;
   app.innerHTML = h; wire();
   scrollTo(0, y);
   const smooth = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
   app.querySelectorAll(".nav button").forEach(b => b.onclick = () => document.getElementById(b.dataset.t)?.scrollIntoView({ behavior: smooth }));
-  const ids = ["table", "next", "results", "fixtures"];
+  const ids = ["table", "fixtures", "results"];
   spyHandler = () => {
     let cur = "table";
-    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = "fixtures";
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = "results";
     else ids.forEach(i => { const el = document.getElementById(i); if (el && el.getBoundingClientRect().top < 140) cur = i; });
     app.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.t === cur));
   };
