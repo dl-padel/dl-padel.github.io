@@ -232,15 +232,14 @@ function renderHome() {
     const featured = list.find(([, c]) => status(c) === "live") || list.find(([, c]) => status(c) === "upcoming");
     h += `<div class="comp-list">` + list.map(([id, c]) => {
       const st = status(c), top = standings(c)[0];
-      const extra = st === "done" && top
+      // One pill per card: winners when finished, otherwise the status.
+      const pill = st === "done" && top
         ? `<span class="chip gold"><span class="ms" aria-hidden="true">trophy</span><span class="sr">Winners: </span>${esc(teamName(top.t))}</span>`
-        : st === "live" && top
-          ? `<span class="chip neutral"><span class="ms" aria-hidden="true">leaderboard</span>${esc(teamName(top.t))}</span>`
-          : "";
+        : `<span class="chip ${st}">${statusLabel[st]}</span>`;
       const x = c.date ? new Date(c.date + "T12:00:00") : null;
       const day = x && !isNaN(x) ? `${DAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}` : "Date to be set", time = fmtTime12(c.start);
       const line = (icon, text) => `<p class="card-line"><span class="ms" aria-hidden="true">${icon}</span>${esc(text)}</p>`;
-      return `<a class="comp-card st-${st}" href="#/c/${encodeURIComponent(id)}"><div class="card-main"><div class="chips"><span class="chip ${st}">${statusLabel[st]}</span>${extra}</div><h3>${esc(c.name)}</h3><div class="card-lines">${line("calendar_today", day)}${time ? line("schedule", time) : ""}${line("group", `${c.teams.length} teams`)}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
+      return `<a class="comp-card st-${st}" href="#/c/${encodeURIComponent(id)}"><div class="card-main"><div class="chips">${pill}</div><h3>${esc(c.name)}</h3><div class="card-lines">${line("calendar_today", day)}${time ? line("schedule", time) : ""}${line("group", `${c.teams.length} teams`)}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
     }).join("") + `</div>`;
   }
   h += `</section></main>`;
