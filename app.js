@@ -105,7 +105,21 @@ function status(c) {
 const statusLabel = { live: "Live", upcoming: "Upcoming", done: "Finished" };
 
 // Circle-method round robin; courts rotate each round.
+// The club's whiteboard running order. Each round lists court 1, 2, 3 as [team, team] using team numbers.
+const CLUB_ORDER = {
+  4: [[[1, 2], [3, 4]], [[1, 3], [2, 4]], [[1, 4], [2, 3]]],
+  6: [[[1, 2], [3, 4], [5, 6]], [[2, 5], [1, 3], [4, 6]], [[3, 5], [2, 6], [1, 4]], [[2, 4], [1, 5], [3, 6]], [[1, 6], [4, 5], [2, 3]]],
+};
 function buildMatches(teams) {
+  const order = CLUB_ORDER[teams.length];
+  if (order) {
+    const out = [];
+    order.forEach((round, r) => round.forEach(([a, b], ci) => out.push({ id: `m${r + 1}-${ci + 1}`, round: r + 1, court: ci + 1, a: teams[a - 1].id, b: teams[b - 1].id, sa: null, sb: null })));
+    return out;
+  }
+  return buildCircle(teams);
+}
+function buildCircle(teams) {
   const ids = teams.map(t => t.id);
   if (ids.length < 2) return [];
   if (ids.length % 2) ids.push(null);
@@ -426,7 +440,11 @@ function renderEditComp(id) {
       <div class="field"><label for="p2-${t.id}">Player 2</label>${playerSelect("p2-" + t.id, t.p2)}</div></div>
       <div class="field"><label for="tn-${t.id}">Team name (optional)</label><input id="tn-${t.id}" data-t="${t.id}" value="${esc(t.name)}" placeholder="Uses player names if empty" autocomplete="off"></div></div>`;
   });
-  h += `<p class="hint">Swap a player if someone drops out. Fixtures and scores stay as they are.</p></div></section>`;
+  h += `<p class="hint">Number teams as on the whiteboard. Swap a player if someone drops out; fixtures and scores stay as they are.</p>`;
+  h += S.pending?.type === "rebuild"
+    ? `<div class="confirm"><p>Rebuild every fixture in the club order? This clears the ${scored} scores entered.</p><div class="row"><button class="btn danger" id="cf-yes">Rebuild and clear scores</button><button class="btn text" id="cf-no">Cancel</button></div></div>`
+    : `<button class="btn tonal" id="rebuild" style="align-self:flex-start"><span class="ms">refresh</span>Rebuild fixtures</button>`;
+  h += `</div></section>`;
 
   // Scores
   h += `<section><div class="sec-h"><h2>Scores</h2><span>Total games won</span></div><div class="card">`;
@@ -478,9 +496,14 @@ function renderEditComp(id) {
     try { await addDoc(collection(db, "players"), { name, createdAt: serverTimestamp() }); S.notice = { t: `Added ${name}. Pick them from a player list below.` }; renderEditComp(id); }
     catch (err) { S.notice = { err: true, t: `Couldn't add player (${err.code}).` }; renderEditComp(id); }
   };
+  const rb = document.getElementById("rebuild"); if (rb) rb.onclick = () => {
+    if (d.matches.some(played)) { S.pending = { type: "rebuild" }; renderEditComp(id); return; }
+    d.matches = buildMatches(d.teams); S.dirty = true; S.notice = { t: "Fixtures rebuilt in the club order. Tap Save to keep them." }; renderEditComp(id);
+  };
   const del = document.getElementById("del"); if (del) del.onclick = () => { S.pending = { type: "delete" }; renderEditComp(id); };
   const yes = document.getElementById("cf-yes"); if (yes) yes.onclick = async () => {
     if (S.pending.type === "count") { setTeamCount(S.pending.n); renderEditComp(id); }
+    else if (S.pending.type === "rebuild") { d.matches = buildMatches(d.teams); S.pending = null; S.dirty = true; S.notice = { t: "Fixtures rebuilt in the club order. Tap Save to keep them." }; renderEditComp(id); }
     else if (S.pending.type === "delete") {
       try { await deleteDoc(doc(db, "comps", id)); S.dirty = false; go("#/admin"); }
       catch (err) { S.pending = null; S.notice = { err: true, t: `Couldn't delete (${err.code}).` }; renderEditComp(id); }
