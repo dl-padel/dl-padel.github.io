@@ -6,7 +6,8 @@ service cloud.firestore {
     // Google email address in lowercase. Add them in the Firebase console.
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email_verified == true
+        && (request.auth.token.email_verified == true
+            || request.auth.token.firebase.sign_in_provider == "password")
         && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
     }
 

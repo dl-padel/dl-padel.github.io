@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBb6nTYnuhG6W8kxDqPGrFOcrZWfqJZ-uw",
@@ -279,12 +279,36 @@ async function signIn() {
 }
 function adminGate() {
   if (!S.authReady) return `<div class="loading">Checking sign-in…</div>`;
-  if (!S.user) return `<div class="card signin"><p class="hint">Sign in with Google to add players, set up competitions and enter scores.</p><button class="btn filled" id="signin"><span class="ms">login</span>Sign in with Google</button></div>`;
+  if (!S.user) return `<div class="card signin" style="align-items:stretch"><p class="hint">Admins sign in to add players, set up competitions and enter scores.</p>
+    <form id="pwform" style="display:flex;flex-direction:column;gap:10px">
+      <div class="field"><label for="em">Email</label><input id="em" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" required></div>
+      <div class="row"><button class="btn filled" type="submit"><span class="ms">login</span>Sign in</button><button class="btn text" type="button" id="forgot">Forgot password</button></div>
+    </form>
+    <p class="hint">Or on a laptop:</p><button class="btn tonal" id="signin" style="align-self:flex-start">Sign in with Google</button></div>`;
   if (!S.isAdmin) return `<div class="card signin"><p>You're signed in as <b>${esc(S.user.email)}</b>, but this account isn't an admin.</p><p class="hint">Ask an existing admin to add your email to the admins list in Firebase.</p><button class="btn tonal" id="signout">Sign out</button></div>`;
   return null;
 }
 function wireGate() {
   const si = document.getElementById("signin"); if (si) si.onclick = signIn;
+  const pf = document.getElementById("pwform");
+  if (pf) pf.onsubmit = async e => {
+    e.preventDefault();
+    const email = document.getElementById("em").value.trim(), pw = document.getElementById("pw").value;
+    try { await signInWithEmailAndPassword(auth, email, pw); S.notice = null; }
+    catch (err) {
+      const bad = ["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found", "auth/invalid-email"].includes(err.code);
+      S.notice = { err: true, t: bad ? "That email and password don't match an admin account." : `Sign-in failed (${err.code}).` }; render();
+    }
+  };
+  const fg = document.getElementById("forgot");
+  if (fg) fg.onclick = async () => {
+    const email = document.getElementById("em").value.trim();
+    if (!email) { S.notice = { err: true, t: "Type your email first, then tap Forgot password." }; render(); return; }
+    try { await sendPasswordResetEmail(auth, email); S.notice = { t: `Password reset email sent to ${email}.` }; }
+    catch (err) { S.notice = { err: true, t: `Couldn't send reset email (${err.code}).` }; }
+    render();
+  };
   const so = document.getElementById("signout"); if (so) so.onclick = () => signOut(auth);
 }
 function renderAdmin() {
