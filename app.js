@@ -88,6 +88,14 @@ function headerWhen(c) {
   const day = x && !isNaN(x) ? `${DAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}` : "";
   return [day, fmtTime12(c.start)].filter(Boolean).join(" | ");
 }
+function headerWhenHtml(c) {
+  const x = c.date ? new Date(c.date + "T12:00:00") : null;
+  const day = x && !isNaN(x) ? `${DAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}` : "", time = fmtTime12(c.start);
+  const parts = [];
+  if (day) parts.push(`<span class="when-i"><span class="ms" aria-hidden="true">calendar_today</span>${esc(day)}</span>`);
+  if (time) parts.push(`<span class="when-i"><span class="ms" aria-hidden="true">schedule</span>${esc(time)}</span>`);
+  return `<span class="when">${parts.join('<span class="when-sep" aria-hidden="true">|</span>')}</span>`;
+}
 function status(c) {
   const n = c.matches.filter(played).length;
   if (n && n === c.matches.length) return "done";
@@ -237,7 +245,7 @@ function renderComp(id) {
   Object.values(byRound).forEach(l => l.sort((a, b) => a.court - b.court));
   let nextR = 0; for (let r = 1; r <= R; r++) if (byRound[r]?.some(m => !played(m))) { nextR = r; break; }
 
-  const sub = esc(headerWhen(c));
+  const sub = headerWhenHtml(c);
   let h = header(esc(c.name), sub, { back: "#/", refresh: true, admin: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : null }) + `<main class="has-nav">`;
 
   h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th>Form</th></tr></thead><tbody>`;
