@@ -54,23 +54,26 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 
 /* Home */
 .comp-list{display:flex;flex-direction:column;gap:10px}
-.comp-card{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;background:var(--surface-1);border-radius:16px;padding:16px;text-decoration:none;color:inherit}
+.comp-card{display:flex;align-items:center;gap:12px;background:var(--surface-1);border-radius:16px;padding:16px;text-decoration:none;color:inherit}
 .comp-card:hover{background:var(--surface-2)}
 .comp-card.featured{background:var(--primary-container);color:var(--on-primary-container)}
-.comp-card h3{margin:0;font-size:18px;font-weight:600}
-.comp-card p{margin:0;font-size:13px;opacity:.8}
-.comp-card .chev{grid-column:2;grid-row:1 / span 5;opacity:.7}
-.comp-card > :not(.chev){grid-column:1}
-.card-line{display:flex;align-items:center;gap:6px}
-.card-line .ms{font-size:16px;width:16px}
-.comp-card .winner{opacity:1;font-weight:600;color:var(--gold);margin-top:2px}
-.comp-card .winner .trophy{font-size:18px;width:18px;vertical-align:0}
+.card-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.comp-card h3{margin:0;font-size:18px;font-weight:600;line-height:24px}
+.card-lines{display:flex;flex-direction:column;gap:4px}
+.card-line{margin:0;display:flex;align-items:center;gap:8px;font-size:13px;line-height:20px;height:20px;opacity:.8}
+.card-line .ms{font-size:16px;width:16px;height:16px;line-height:16px}
+.comp-card .chev{opacity:.7}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:2px 10px;border-radius:8px;justify-self:start;margin-bottom:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;line-height:16px;padding:4px 10px;border-radius:8px;justify-self:start;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip .ms{font-size:14px;width:14px;height:14px;line-height:14px}
 .chip.live{background:var(--loss-c);color:var(--loss)}
 .chip.live::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .chip.upcoming{background:var(--tertiary-container);color:var(--on-tertiary-container)}
-.chip.done{background:var(--surface-3);color:var(--on-surface-var)}
+.chip.done{background:var(--win-c);color:var(--win)}
+.chip.gold{background:var(--gold-c);color:var(--on-gold-c)}
+.chip.gold .ms{color:var(--gold);font-variation-settings:"FILL" 1}
+.chip.neutral{background:var(--surface-3);color:var(--on-surface-var)}
 
 /* Standings */
 .card{background:var(--surface-1);border-radius:16px;overflow:hidden}
