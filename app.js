@@ -36,12 +36,16 @@ onSnapshot(collection(db, "comps"), snap => {
   S.compsReady = true; onData("comps");
 }, err => { S.loadError = err; render(); });
 
-onAuthStateChanged(auth, async user => {
-  S.user = user; S.isAdmin = false;
+let adminUnsub = null;
+onAuthStateChanged(auth, user => {
+  S.user = user; S.isAdmin = false; S.adminChecked = false; S.adminError = null;
+  if (adminUnsub) { adminUnsub(); adminUnsub = null; }
   if (user && user.email) {
-    try { S.isAdmin = (await getDoc(doc(db, "admins", user.email.toLowerCase()))).exists(); }
-    catch { S.isAdmin = false; }
-  }
+    // A live listener retries on its own when the connection is slow or drops.
+    adminUnsub = onSnapshot(doc(db, "admins", user.email.toLowerCase()),
+      snap => { S.isAdmin = snap.exists(); S.adminChecked = true; S.adminError = null; render(); },
+      err => { S.adminError = err; S.adminChecked = true; render(); });
+  } else S.adminChecked = true;
   S.authReady = true; render();
 });
 
@@ -321,12 +325,15 @@ async function signIn() {
 function adminGate() {
   if (!S.authReady) return `<div class="loading">Checking sign-in…</div>`;
   if (!S.user) return `<div class="card signin"><p class="hint">Admins sign in with Google to add players, set up competitions and enter scores. On iPhone, use Safari.</p><button class="btn filled" id="signin"><span class="ms">login</span>Sign in with Google</button></div>`;
+  if (!S.isAdmin && !S.adminChecked) return `<div class="loading">Checking admin access…</div>`;
+  if (!S.isAdmin && S.adminError) return `<div class="card signin"><p>Couldn't check admin access (${esc(S.adminError.code || "connection problem")}).</p><p class="hint">This is usually a slow connection. Reload to try again.</p><button class="btn filled" id="reload"><span class="ms">refresh</span>Reload</button><button class="btn text" id="signout">Sign out</button></div>`;
   if (!S.isAdmin) return `<div class="card signin"><p>You're signed in as <b>${esc(S.user.email)}</b>, but this account isn't an admin.</p><p class="hint">Ask an existing admin to add your email to the admins list in Firebase.</p><button class="btn tonal" id="signout">Sign out</button></div>`;
   return null;
 }
 function wireGate() {
   const si = document.getElementById("signin"); if (si) si.onclick = signIn;
   const so = document.getElementById("signout"); if (so) so.onclick = () => signOut(auth);
+  const rl = document.getElementById("reload"); if (rl) rl.onclick = () => location.reload();
 }
 // One-off import of a past competition from the group chat.
 const PAST_IMPORTS = [{
