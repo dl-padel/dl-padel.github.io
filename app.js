@@ -94,7 +94,7 @@ function headerWhenHtml(c) {
   const parts = [];
   if (day) parts.push(`<span class="when-i"><span class="ms" aria-hidden="true">calendar_today</span>${esc(day)}</span>`);
   if (time) parts.push(`<span class="when-i"><span class="ms" aria-hidden="true">schedule</span>${esc(time)}</span>`);
-  return `<span class="when">${parts.join('<span class="when-sep" aria-hidden="true">|</span>')}</span>`;
+  return `<span class="when">${parts.join("")}</span>`;
 }
 function status(c) {
   const n = c.matches.filter(played).length;
