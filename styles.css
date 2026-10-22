@@ -64,7 +64,7 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .comp-card h3{margin:0;font-size:24px;font-weight:600;line-height:30px}
 .card-lines{display:flex;flex-wrap:wrap;gap:4px 16px}
-.card-line{margin:0;display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px;line-height:20px;height:20px;opacity:.8}
+.card-line{margin:0;display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:13px;line-height:20px;height:20px;opacity:.8}
 .card-line .ms{font-size:16px;width:16px;height:16px;line-height:16px;transform:translateY(-1px)}
 .comp-card .chev{opacity:.7}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
