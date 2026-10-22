@@ -311,6 +311,28 @@ function wireGate() {
   };
   const so = document.getElementById("signout"); if (so) so.onclick = () => signOut(auth);
 }
+// One-off import of a past competition from the group chat.
+const PAST_IMPORTS = [{
+  id: "september-2026", label: "Sunday 27 September 2026",
+  comp: { name: "September 2026", date: "2026-09-27", start: "08:00", gameMins: 30, breakMins: 5 },
+  teams: [["Cally", "Rodrigo"], ["Ben", "Jack"], ["Piers", "Nico"], ["Benji", "Andreas"]],
+  // [round, court, teamA, teamB, gamesA, gamesB] using team numbers 1-4
+  games: [[1, 1, 1, 2, 10, 2], [1, 2, 3, 4, 8, 5], [2, 1, 3, 1, 6, 6], [2, 2, 4, 2, 6, 7], [3, 1, 4, 1, 7, 6], [3, 2, 3, 2, 6, 5]],
+}];
+async function importPast(imp) {
+  const idByName = {};
+  Object.entries(S.players).forEach(([id, p]) => idByName[p.name.toLowerCase()] = id);
+  for (const name of new Set(imp.teams.flat())) {
+    if (!idByName[name.toLowerCase()]) {
+      const ref = await addDoc(collection(db, "players"), { name, createdAt: serverTimestamp() });
+      idByName[name.toLowerCase()] = ref.id;
+    }
+  }
+  const teams = imp.teams.map((pair, i) => ({ id: "t" + (i + 1), name: "", p1: idByName[pair[0].toLowerCase()], p2: idByName[pair[1].toLowerCase()] }));
+  const matches = imp.games.map(([round, court, a, b, sa, sb]) => ({ id: `m${round}-${court}`, round, court, a: "t" + a, b: "t" + b, sa, sb }));
+  await setDoc(doc(db, "comps", imp.id), { ...imp.comp, teams, matches, updatedAt: serverTimestamp() });
+}
+
 function renderAdmin() {
   document.title = `Admin · ${SITE}`;
   let h = header("Admin", S.user ? esc(S.user.email) : SITE, { back: "#/" }) + `<main class="admin">`;
@@ -319,6 +341,9 @@ function renderAdmin() {
   if (gate) { app.innerHTML = h + gate + `</main>`; wire(); wireGate(); return; }
 
   const comps = sortedComps();
+  PAST_IMPORTS.filter(imp => !S.comps[imp.id]).forEach(imp => {
+    h += `<section><div class="card"><p><b>Past competition ready to add</b></p><p class="hint">${esc(imp.label)} · ${imp.teams.length} teams · ${imp.games.length} games with scores. Players are added to the list if they're new.</p><button class="btn filled" data-import="${imp.id}" style="align-self:flex-start"><span class="ms">download</span>Import ${esc(imp.comp.name)}</button></div></section>`;
+  });
   h += `<section><div class="sec-h"><h2>Competitions</h2></div><div class="card"><a class="btn filled" href="#/admin/c/new" style="align-self:flex-start"><span class="ms">add</span>New competition</a><div class="alist">`;
   h += comps.map(([id, c]) => `<a href="#/admin/c/${encodeURIComponent(id)}"><span class="t"><b>${esc(c.name)}</b><small>${esc(fmtDate(c.date)) || "No date"} · ${statusLabel[status(c)]}</small></span><span class="ms">edit</span></a>`).join("") || `<p class="hint">No competitions yet.</p>`;
   h += `</div></div></section>`;
@@ -332,6 +357,13 @@ function renderAdmin() {
   h += `<section><div class="card"><button class="btn tonal" id="signout" style="align-self:flex-start"><span class="ms">logout</span>Sign out</button></div></section></main>`;
   app.innerHTML = h; wire(); wireGate();
 
+  app.querySelectorAll("button[data-import]").forEach(b => b.onclick = async () => {
+    const imp = PAST_IMPORTS.find(x => x.id === b.dataset.import);
+    b.disabled = true; b.textContent = "Importing…";
+    try { await importPast(imp); S.notice = { t: `${imp.comp.name} imported. Check it on the homepage.` }; }
+    catch (err) { S.notice = { err: true, t: `Couldn't import (${err.code || err.message}).` }; }
+    render();
+  });
   document.getElementById("addp").onsubmit = async e => {
     e.preventDefault();
     const inp = document.getElementById("newp"), name = inp.value.trim();
