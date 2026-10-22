@@ -214,8 +214,13 @@ function renderHome() {
     const featured = list.find(([, c]) => status(c) === "live") || list.find(([, c]) => status(c) === "upcoming");
     h += `<div class="comp-list">` + list.map(([id, c]) => {
       const st = status(c), top = standings(c)[0];
-      const leader = st === "upcoming" || !top ? `${c.teams.length} teams · starts ${esc(c.start)}` : `${st === "done" ? "Winners" : "Leading"}: ${esc(teamName(top.t))}`;
-      return `<a class="comp-card${featured && featured[0] === id ? " featured" : ""}" href="#/c/${encodeURIComponent(id)}"><span class="chip ${st}">${statusLabel[st]}</span><span class="ms" aria-hidden="true">chevron_right</span><h3>${esc(c.name)}</h3><p>${esc(fmtDate(c.date)) || "Date to be set"} · ${leader}</p></a>`;
+      const who = st === "done" && top
+        ? `<p class="card-line winner"><span class="ms trophy" aria-hidden="true">trophy</span><span><span class="sr">Winners: </span>${esc(teamName(top.t))}</span></p>`
+        : st === "live" && top
+          ? `<p class="card-line"><span class="ms" aria-hidden="true">leaderboard</span>Leading: ${esc(teamName(top.t))}</p>`
+          : `<p class="card-line"><span class="ms" aria-hidden="true">group</span>${c.teams.length} teams</p>`;
+      const when = c.date || c.start ? headerWhenHtml(c) : "Date to be set";
+      return `<a class="comp-card${featured && featured[0] === id ? " featured" : ""}" href="#/c/${encodeURIComponent(id)}"><span class="chip ${st}">${statusLabel[st]}</span><span class="ms chev" aria-hidden="true">chevron_right</span><h3>${esc(c.name)}</h3><p class="card-line">${when}</p>${who}</a>`;
     }).join("") + `</div>`;
   }
   h += `</section></main>`;
