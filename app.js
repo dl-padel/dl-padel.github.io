@@ -247,12 +247,29 @@ function renderHome() {
 }
 
 // ----- Competition page -----
+// Defending champions: a team with the same two players as the winners of
+// the most recent finished competition dated before this one.
+let DEFENDING = new Set();
+function defendingTeamIds(c, selfId) {
+  if (!c) return new Set();
+  const prev = Object.entries(S.comps)
+    .filter(([k, x]) => k !== selfId && x.date && status(x) === "done" && (!c.date || x.date < c.date))
+    .sort(([, a], [, b]) => b.date.localeCompare(a.date))[0];
+  if (!prev) return new Set();
+  const top = standings(prev[1])[0];
+  const key = t => [t.p1, t.p2].filter(Boolean).sort().join("|");
+  const wk = top ? key(top.t) : "";
+  if (!wk.includes("|")) return new Set();
+  return new Set(c.teams.filter(t => key(t) === wk).map(t => t.id));
+}
+const crown = t => DEFENDING.has(t.id) ? '<span class="ms crown" role="img" aria-label="Defending champions" title="Defending champions">crown</span>' : "";
+
 function matchCard(c, m) {
   const A = teamById(c, m.a), B = teamById(c, m.b), done = played(m), sa = +m.sa, sb = +m.sb;
   const side = (t, sc, o) => {
     const cls = !done ? "" : sc > o ? " won" : sc < o ? " lost" : "";
     const pl = (t.name || "").trim() ? playersOf(t) : "";
-    return `<div class="side${cls}"><span class="nm">${esc(teamName(t))}${pl ? `<small>${esc(pl)}</small>` : ""}</span>${done ? `<span class="sc num">${sc}</span>` : ""}</div>`;
+    return `<div class="side${cls}"><span class="nm">${esc(teamName(t))}${crown(t)}${pl ? `<small>${esc(pl)}</small>` : ""}</span>${done ? `<span class="sc num">${sc}</span>` : ""}</div>`;
   };
   return `<div class="match"><div class="court"><span><small>Court</small><b>${m.court}</b></span></div>${side(A, sa, sb)}${side(B, sb, sa)}</div>`;
 }
@@ -264,6 +281,7 @@ function renderComp(id) {
   const c = S.comps[id];
   if (!c) { app.innerHTML = header("Not found", "", { back: "#/" }) + `<main><div class="empty">This competition doesn't exist or has been deleted. <a href="#/">See all competitions</a></div></main>`; return; }
   document.title = `${c.name} · ${SITE}`;
+  DEFENDING = defendingTeamIds(c, id);
   const st = standings(c), R = roundsOf(c), anyDraw = st.some(r => r.D > 0), playedCount = c.matches.filter(played).length;
   const byRound = {}; c.matches.forEach(m => (byRound[m.round] ||= []).push(m));
   Object.values(byRound).forEach(l => l.sort((a, b) => a.court - b.court));
@@ -277,7 +295,7 @@ function renderComp(id) {
     const pl = (r.t.name || "").trim() ? playersOf(r.t) : "";
     const form = r.form.length ? r.form.slice(-5).map(f => `<span class="fchip f${f}">${f}</span>`).join("") : `<span class="fnone">–</span>`;
     const champ = i === 0 && status(c) === "done";
-    h += `<tr${champ ? ' class="champ"' : i === 0 && playedCount ? ' class="lead"' : ""}><td class="pos num">${champ ? '<span class="ms trophy" aria-label="Winners" title="Winners">trophy</span>' : i + 1}</td><td class="team l"><span class="tname">${esc(teamName(r.t))}</span>${pl ? `<span class="tplayers">${esc(pl)}</span>` : ""}</td><td>${r.P}</td><td class="w">${r.W}</td>${anyDraw ? `<td>${r.D}</td>` : ""}<td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td><div class="form">${form}</div></td></tr>`;
+    h += `<tr${champ ? ' class="champ"' : i === 0 && playedCount ? ' class="lead"' : ""}><td class="pos num">${champ ? '<span class="ms trophy" aria-label="Winners" title="Winners">trophy</span>' : i + 1}</td><td class="team l"><span class="tname">${esc(teamName(r.t))}</span>${crown(r.t)}${pl ? `<span class="tplayers">${esc(pl)}</span>` : ""}</td><td>${r.P}</td><td class="w">${r.W}</td>${anyDraw ? `<td>${r.D}</td>` : ""}<td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td><div class="form">${form}</div></td></tr>`;
   });
   h += `</tbody></table></div></div></section>`;
 
@@ -440,8 +458,9 @@ function renderEditComp(id) {
     <div class="seg" role="group" aria-label="Number of teams">${[4, 6].map(k => `<button data-n="${k}" class="${n === k ? "on" : ""}">${n === k ? '<span class="ms" style="font-size:18px;width:18px">check</span>' : ""}${k} teams · ${k / 2} courts</button>`).join("")}</div>`;
   if (S.pending?.type === "count") h += `<div class="confirm"><p>Switching to ${S.pending.n} teams rebuilds every fixture and clears the ${scored} scores entered.</p><div class="row"><button class="btn danger" id="cf-yes">Switch and clear scores</button><button class="btn text" id="cf-no">Cancel</button></div></div>`;
   h += `<form class="row" id="addp"><div class="field"><label for="newp">Player not listed? Add them</label><input id="newp" placeholder="Name" autocomplete="off"></div><button class="btn tonal" type="submit"><span class="ms">person_add</span>Add</button></form>`;
+  const defIds = defendingTeamIds(d, id); DEFENDING = defIds;
   d.teams.forEach((t, i) => {
-    h += `<div class="team-ed"><h4>Team ${i + 1}${playersOf(t) ? " · " + esc(playersOf(t)) : ""}</h4>
+    h += `<div class="team-ed"><h4>Team ${i + 1}${playersOf(t) ? " · " + esc(playersOf(t)) : ""}${defIds.has(t.id) ? " " + crown(t) + " Defending champions" : ""}</h4>
       <div class="row"><div class="field"><label for="p1-${t.id}">Player 1</label>${playerSelect("p1-" + t.id, t.p1)}</div>
       <div class="field"><label for="p2-${t.id}">Player 2</label>${playerSelect("p2-" + t.id, t.p2)}</div></div>
       <div class="field"><label for="tn-${t.id}">Team name (optional)</label><input id="tn-${t.id}" data-t="${t.id}" value="${esc(t.name)}" placeholder="Uses player names if empty" autocomplete="off"></div></div>`;

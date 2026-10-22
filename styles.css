@@ -90,6 +90,7 @@ td.pos{width:28px;padding-left:14px;color:var(--on-surface-var);font-weight:500}
 tr.lead td.pos{color:var(--primary)}
 tr.champ td{background:var(--gold-c);color:var(--on-gold-c);border-top-color:transparent}
 tr.champ .tplayers{color:inherit;opacity:.8}
+.crown{font-size:16px;width:16px;height:16px;line-height:16px;color:var(--gold);font-variation-settings:"FILL" 1;margin-left:4px;vertical-align:-2px}
 .trophy{font-size:20px;width:20px;color:var(--gold);font-variation-settings:"FILL" 1;vertical-align:-4px}
 td.team{min-width:130px}
 .tname{font-weight:600}
