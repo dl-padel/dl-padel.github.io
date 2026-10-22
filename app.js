@@ -100,6 +100,13 @@ function headerWhenHtml(c) {
   if (time) parts.push(`<span class="when-i"><span class="ms" aria-hidden="true">schedule</span>${esc(time)}</span>`);
   return `<span class="when">${parts.join("")}</span>`;
 }
+// Date, time and team count, shared by homepage cards and the competition header.
+function detailsHtml(c) {
+  const x = c.date ? new Date(c.date + "T12:00:00") : null;
+  const day = x && !isNaN(x) ? `${DAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}` : "Date to be set", time = fmtTime12(c.start);
+  const line = (icon, text) => `<span class="card-line"><span class="ms" aria-hidden="true">${icon}</span>${esc(text)}</span>`;
+  return `<div class="card-lines">${line("calendar_today", day)}${time ? line("schedule", time) : ""}${line("group", `${c.teams.length} teams`)}</div>`;
+}
 function status(c) {
   const n = c.matches.filter(played).length;
   if (n && n === c.matches.length) return "done";
@@ -210,7 +217,7 @@ function renderError() {
 function header(title, sub, o = {}) {
   let h = `<header class="bar"><div class="bar-in">`;
   if (o.back) h += `<a class="icon-btn" href="${o.back}" aria-label="Back"><span class="ms">arrow_back</span></a>`;
-  h += `<div class="bar-title"><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ""}</div>`;
+  h += `<div class="bar-title"><h1>${title}</h1>${sub ? `<div class="bar-sub">${sub}</div>` : ""}</div>`;
   if (o.refresh) h += `<button class="icon-btn" id="refresh" aria-label="Refresh scores" title="Refresh scores"><span class="ms">refresh</span></button>`;
   if (o.admin) h += `<a class="icon-btn" href="${o.admin}" aria-label="Admin" title="Admin"><span class="ms">${S.isAdmin ? "edit_square" : "admin_panel_settings"}</span></a>`;
   return h + `</div></header>`;
@@ -236,10 +243,7 @@ function renderHome() {
       const pill = st === "done" && top
         ? `<span class="chip gold"><span class="ms" aria-hidden="true">trophy</span><span class="sr">Winners: </span>${esc(teamName(top.t))}</span>`
         : `<span class="chip ${st}">${statusLabel[st]}</span>`;
-      const x = c.date ? new Date(c.date + "T12:00:00") : null;
-      const day = x && !isNaN(x) ? `${DAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}` : "Date to be set", time = fmtTime12(c.start);
-      const line = (icon, text) => `<p class="card-line"><span class="ms" aria-hidden="true">${icon}</span>${esc(text)}</p>`;
-      return `<a class="comp-card st-${st}" href="#/c/${encodeURIComponent(id)}"><div class="card-main"><div class="chips">${pill}</div><h3>${esc(c.name)}</h3><div class="card-lines">${line("calendar_today", day)}${time ? line("schedule", time) : ""}${line("group", `${c.teams.length} teams`)}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
+      return `<a class="comp-card st-${st}" href="#/c/${encodeURIComponent(id)}"><div class="card-main"><div class="chips">${pill}</div><h3>${esc(c.name)}</h3>${detailsHtml(c)}</div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
     }).join("") + `</div>`;
   }
   h += `</section></main>`;
@@ -287,7 +291,7 @@ function renderComp(id) {
   Object.values(byRound).forEach(l => l.sort((a, b) => a.court - b.court));
   let nextR = 0; for (let r = 1; r <= R; r++) if (byRound[r]?.some(m => !played(m))) { nextR = r; break; }
 
-  const sub = headerWhenHtml(c);
+  const sub = detailsHtml(c);
   let h = header(esc(c.name), sub, { back: "#/", refresh: true, admin: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : null }) + `<main class="has-nav">`;
 
   h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th>Form</th></tr></thead><tbody>`;
