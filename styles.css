@@ -4,6 +4,7 @@
   --tertiary-container:#e2ec7a; --on-tertiary-container:#1a1d00;
   --surface:#f9f9ff; --surface-1:#f1f3fb; --surface-2:#e9edf6; --surface-3:#e1e6f0;
   --on-surface:#191c21; --on-surface-var:#43474f; --outline:#73777f; --outline-var:#c3c6cf;
+  --gold:#9a6b00; --gold-c:#ffe08c; --on-gold-c:#2e2100;
   --win:#1b6d3b; --win-c:#c4efcf; --loss:#a3262d; --loss-c:#ffdad7; --draw-c:#e2e2e9;
   --font:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
   --nav-h:80px;
@@ -14,6 +15,7 @@
   --tertiary-container:#454a00; --on-tertiary-container:#e2ec7a;
   --surface:#111318; --surface-1:#191c21; --surface-2:#1d2026; --surface-3:#282a30;
   --on-surface:#e1e2e9; --on-surface-var:#c3c6cf; --outline:#8d9199; --outline-var:#43474f;
+  --gold:#f5c542; --gold-c:#4a3800; --on-gold-c:#ffe08c;
   --win:#8fd8a3; --win-c:#0f4f27; --loss:#ffb3ad; --loss-c:#7a1a20; --draw-c:#3a3d44;
   color-scheme:dark}}
 *{box-sizing:border-box}
@@ -69,6 +71,9 @@ th.l,td.l{text-align:left}
 td{text-align:center;padding:10px 6px;border-top:1px solid var(--outline-var)}
 td.pos{width:28px;padding-left:14px;color:var(--on-surface-var);font-weight:500}
 tr.lead td.pos{color:var(--primary)}
+tr.champ td{background:var(--gold-c);color:var(--on-gold-c);border-top-color:transparent}
+tr.champ .tplayers{color:inherit;opacity:.8}
+.trophy{font-size:20px;width:20px;color:var(--gold);font-variation-settings:"FILL" 1;vertical-align:-4px}
 td.team{min-width:130px}
 .tname{font-weight:600}
 .tplayers{display:block;font-size:12px;color:var(--on-surface-var)}
