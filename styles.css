@@ -58,8 +58,6 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .comp-list{display:flex;flex-direction:column;gap:10px}
 .comp-card{display:flex;align-items:center;gap:12px;background:var(--surface-1);border-radius:16px;padding:16px;text-decoration:none;color:inherit}
 .comp-card:hover{background:var(--surface-2)}
-.comp-card.st-done{background:var(--done-card)}
-.comp-card.st-done:hover{background:var(--done-card-hover)}
 .card-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .comp-card h3{margin:0;font-size:24px;font-weight:600;line-height:30px}
