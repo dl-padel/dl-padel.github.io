@@ -1,6 +1,7 @@
 /* DL Padel — Material 3 styling. Purple primary with purple-tinted neutrals, ball yellow highlights. */
 :root{
   --primary:#6750a4; --on-primary:#fff; --primary-container:#eaddff; --on-primary-container:#21005d;
+  --secondary-container:#e8def8; --on-secondary-container:#1d192b;
   --tertiary-container:#e2ec7a; --on-tertiary-container:#1a1d00;
   --surface:#fef7ff; --surface-1:#f7f2fa; --surface-2:#f3edf7; --surface-3:#ece6f0;
   --on-surface:#1d1b20; --on-surface-var:#49454f; --outline:#79747e; --outline-var:#cac4d0;
@@ -13,6 +14,7 @@
 }
 @media (prefers-color-scheme:dark){:root{
   --primary:#d0bcff; --on-primary:#381e72; --primary-container:#4f378b; --on-primary-container:#eaddff;
+  --secondary-container:#4a4458; --on-secondary-container:#e8def8;
   --tertiary-container:#454a00; --on-tertiary-container:#e2ec7a;
   --surface:#141218; --surface-1:#1d1b20; --surface-2:#211f26; --surface-3:#2b2930;
   --on-surface:#e6e0e9; --on-surface-var:#cac4d0; --outline:#938f99; --outline-var:#49454f;
@@ -70,7 +72,7 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .chip .ms{font-size:14px;width:14px;height:14px;line-height:14px;transform:translateY(-0.5px)}
 .chip.live{background:var(--loss-c);color:var(--loss)}
 .chip.live::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.chip.upcoming{background:var(--tertiary-container);color:var(--on-tertiary-container)}
+.chip.upcoming{background:var(--surface-3);color:var(--on-surface)}
 .comp-card .chip.upcoming{background:var(--surface-3);color:var(--on-surface)}
 .chip.done{background:var(--win-c);color:var(--win)}
 .chip.gold{background:var(--gold-c);color:var(--on-gold-c)}
@@ -114,9 +116,6 @@ td.w{font-weight:700}
 .side .sc{font-weight:700;font-size:18px;min-width:28px;text-align:right}
 .side.won .nm{font-weight:600}
 .side.lost{color:var(--on-surface-var)}
-.next .match{background:var(--primary-container);color:var(--on-primary-container)}
-.next .court{background:var(--primary);color:var(--on-primary)}
-.next .side .nm small{color:inherit;opacity:.75}
 .empty{background:var(--surface-1);border-radius:16px;padding:20px;color:var(--on-surface-var);text-align:center}
 
 /* Bottom navigation bar */
@@ -125,7 +124,7 @@ td.w{font-weight:700}
 .nav button{border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--on-surface-var);font-size:12px;font-weight:500}
 .nav .pill{width:64px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background .2s}
 .nav button.on{color:var(--on-surface)}
-.nav button.on .pill{background:var(--tertiary-container);color:var(--on-tertiary-container)}
+.nav button.on .pill{background:var(--secondary-container);color:var(--on-secondary-container)}
 .nav button.on .ms{font-variation-settings:"FILL" 1}
 
 /* Admin */
