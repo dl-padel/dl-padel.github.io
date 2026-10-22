@@ -74,6 +74,20 @@ function fmtDate(d, long) {
   if (isNaN(x)) return d;
   return x.toLocaleDateString("en-GB", long ? { weekday: "long", day: "numeric", month: "long", year: "numeric" } : { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 }
+// Header format: "Sun, 27 Sept | 8am"
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
+function fmtTime12(t) {
+  const [h, m] = (t || "").split(":").map(Number);
+  if (isNaN(h)) return "";
+  const suf = h < 12 ? "am" : "pm", h12 = h % 12 || 12;
+  return m ? `${h12}:${String(m).padStart(2, "0")}${suf}` : `${h12}${suf}`;
+}
+function headerWhen(c) {
+  const x = c.date ? new Date(c.date + "T12:00:00") : null;
+  const day = x && !isNaN(x) ? `${DAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}` : "";
+  return [day, fmtTime12(c.start)].filter(Boolean).join(" | ");
+}
 function status(c) {
   const n = c.matches.filter(played).length;
   if (n && n === c.matches.length) return "done";
@@ -223,7 +237,7 @@ function renderComp(id) {
   Object.values(byRound).forEach(l => l.sort((a, b) => a.court - b.court));
   let nextR = 0; for (let r = 1; r <= R; r++) if (byRound[r]?.some(m => !played(m))) { nextR = r; break; }
 
-  const sub = [fmtDate(c.date), "Starts " + esc(c.start), courtCount(c) + " courts"].filter(Boolean).join(" · ");
+  const sub = esc(headerWhen(c));
   let h = header(esc(c.name), sub, { back: "#/", refresh: true, admin: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : null }) + `<main class="has-nav">`;
 
   h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th>Form</th></tr></thead><tbody>`;
