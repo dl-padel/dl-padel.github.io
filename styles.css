@@ -4,6 +4,7 @@
   --tertiary-container:#e2ec7a; --on-tertiary-container:#1a1d00;
   --surface:#f9f9ff; --surface-1:#f1f3fb; --surface-2:#e9edf6; --surface-3:#e1e6f0;
   --on-surface:#191c21; --on-surface-var:#43474f; --outline:#73777f; --outline-var:#c3c6cf;
+  --done-card:#e0f0e4; --done-card-hover:#d3e9d9;
   --gold:#9a6b00; --gold-c:#ffe08c; --on-gold-c:#2e2100;
   --win:#1b6d3b; --win-c:#c4efcf; --loss:#a3262d; --loss-c:#ffdad7; --draw-c:#e2e2e9;
   --font:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -15,6 +16,7 @@
   --tertiary-container:#454a00; --on-tertiary-container:#e2ec7a;
   --surface:#111318; --surface-1:#191c21; --surface-2:#1d2026; --surface-3:#282a30;
   --on-surface:#e1e2e9; --on-surface-var:#c3c6cf; --outline:#8d9199; --outline-var:#43474f;
+  --done-card:#16271c; --done-card-hover:#1c3123;
   --gold:#f5c542; --gold-c:#4a3800; --on-gold-c:#ffe08c;
   --win:#8fd8a3; --win-c:#0f4f27; --loss:#ffb3ad; --loss-c:#7a1a20; --draw-c:#3a3d44;
   color-scheme:dark}}
@@ -56,7 +58,8 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .comp-list{display:flex;flex-direction:column;gap:10px}
 .comp-card{display:flex;align-items:center;gap:12px;background:var(--surface-1);border-radius:16px;padding:16px;text-decoration:none;color:inherit}
 .comp-card:hover{background:var(--surface-2)}
-.comp-card.featured{background:var(--primary-container);color:var(--on-primary-container)}
+.comp-card.st-done{background:var(--done-card)}
+.comp-card.st-done:hover{background:var(--done-card-hover)}
 .card-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .comp-card h3{margin:0;font-size:18px;font-weight:600;line-height:24px}
