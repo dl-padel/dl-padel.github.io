@@ -62,7 +62,7 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .comp-card.st-done:hover{background:var(--done-card-hover)}
 .card-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.comp-card h3{margin:0;font-size:18px;font-weight:600;line-height:24px}
+.comp-card h3{margin:0;font-size:21px;font-weight:600;line-height:28px}
 .card-lines{display:flex;flex-direction:column;gap:4px}
 .card-line{margin:0;display:flex;align-items:center;gap:8px;font-size:13px;line-height:20px;height:20px;opacity:.8}
 .card-line .ms{font-size:16px;width:16px;height:16px;line-height:16px;transform:translateY(-1px)}
@@ -73,6 +73,7 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .chip.live{background:var(--loss-c);color:var(--loss)}
 .chip.live::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .chip.upcoming{background:var(--tertiary-container);color:var(--on-tertiary-container)}
+.comp-card .chip.upcoming{background:var(--surface-3);color:var(--on-surface)}
 .chip.done{background:var(--win-c);color:var(--win)}
 .chip.gold{background:var(--gold-c);color:var(--on-gold-c)}
 .chip.gold .ms{color:var(--gold);font-variation-settings:"FILL" 1}
