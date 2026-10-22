@@ -218,11 +218,11 @@ function renderHome() {
         ? `<span class="chip gold"><span class="ms" aria-hidden="true">trophy</span><span class="sr">Winners: </span>${esc(teamName(top.t))}</span>`
         : st === "live" && top
           ? `<span class="chip neutral"><span class="ms" aria-hidden="true">leaderboard</span>${esc(teamName(top.t))}</span>`
-          : `<span class="chip neutral"><span class="ms" aria-hidden="true">group</span>${c.teams.length} teams</span>`;
+          : "";
       const x = c.date ? new Date(c.date + "T12:00:00") : null;
       const day = x && !isNaN(x) ? `${DAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}` : "Date to be set", time = fmtTime12(c.start);
       const line = (icon, text) => `<p class="card-line"><span class="ms" aria-hidden="true">${icon}</span>${esc(text)}</p>`;
-      return `<a class="comp-card${featured && featured[0] === id ? " featured" : ""}" href="#/c/${encodeURIComponent(id)}"><div class="card-main"><div class="chips"><span class="chip ${st}">${statusLabel[st]}</span>${extra}</div><h3>${esc(c.name)}</h3><div class="card-lines">${line("calendar_today", day)}${time ? line("schedule", time) : ""}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
+      return `<a class="comp-card${featured && featured[0] === id ? " featured" : ""}" href="#/c/${encodeURIComponent(id)}"><div class="card-main"><div class="chips"><span class="chip ${st}">${statusLabel[st]}</span>${extra}</div><h3>${esc(c.name)}</h3><div class="card-lines">${line("calendar_today", day)}${time ? line("schedule", time) : ""}${line("group", `${c.teams.length} teams`)}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
     }).join("") + `</div>`;
   }
   h += `</section></main>`;
