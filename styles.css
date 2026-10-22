@@ -97,7 +97,7 @@ td.team{min-width:130px}
 .tname{font-weight:600}
 .tplayers{display:block;font-size:12px;color:var(--on-surface-var)}
 td.w{font-weight:700}
-.form{display:flex;gap:3px;justify-content:center;padding-right:8px}
+.form{display:flex;gap:3px;justify-content:flex-start;padding-right:8px}
 .fchip{width:20px;height:20px;border-radius:6px;font-size:11px;font-weight:700;display:grid;place-items:center}
 .fW{background:var(--win-c);color:var(--win)} .fL{background:var(--loss-c);color:var(--loss)} .fD{background:var(--draw-c);color:var(--on-surface-var)}
 .fnone{color:var(--outline);font-size:13px}
@@ -108,7 +108,7 @@ td.w{font-weight:700}
 .round + .round{margin-top:16px}
 .round-h{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:500;line-height:20px;min-height:24px;color:var(--on-surface-var);padding:0 4px}
 .round-h b{color:var(--on-surface);font-weight:600}
-.match{background:var(--surface-1);border-radius:16px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center}
+.match{background:var(--surface-1);border-radius:16px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center}
 .court{grid-row:span 2;width:44px;height:44px;border-radius:12px;background:var(--primary-container);color:var(--on-primary-container);display:grid;place-items:center;text-align:center;line-height:1}
 .court small{display:block;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .court b{font-size:18px}

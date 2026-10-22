@@ -294,12 +294,12 @@ function renderComp(id) {
   const sub = detailsHtml(c);
   let h = header(esc(c.name), sub, { back: "#/", refresh: true, admin: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : null }) + `<main class="has-nav">`;
 
-  h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th>Form</th></tr></thead><tbody>`;
+  h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th class="l">Form</th></tr></thead><tbody>`;
   st.forEach((r, i) => {
     const pl = (r.t.name || "").trim() ? playersOf(r.t) : "";
     const form = r.form.length ? r.form.slice(-5).map(f => `<span class="fchip f${f}">${f}</span>`).join("") : `<span class="fnone">–</span>`;
     const champ = i === 0 && status(c) === "done";
-    h += `<tr${champ ? ' class="champ"' : i === 0 && playedCount ? ' class="lead"' : ""}><td class="pos num">${champ ? '<span class="ms trophy" aria-label="Winners" title="Winners">trophy</span>' : i + 1}</td><td class="team l"><span class="tname">${esc(teamName(r.t))}</span>${crown(r.t)}${pl ? `<span class="tplayers">${esc(pl)}</span>` : ""}</td><td>${r.P}</td><td class="w">${r.W}</td>${anyDraw ? `<td>${r.D}</td>` : ""}<td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td><div class="form">${form}</div></td></tr>`;
+    h += `<tr${champ ? ' class="champ"' : i === 0 && playedCount ? ' class="lead"' : ""}><td class="pos num">${champ ? '<span class="ms trophy" aria-label="Winners" title="Winners">trophy</span>' : i + 1}</td><td class="team l"><span class="tname">${esc(teamName(r.t))}</span>${crown(r.t)}${pl ? `<span class="tplayers">${esc(pl)}</span>` : ""}</td><td>${r.P}</td><td class="w">${r.W}</td>${anyDraw ? `<td>${r.D}</td>` : ""}<td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td class="l"><div class="form">${form}</div></td></tr>`;
   });
   h += `</tbody></table></div></div></section>`;
 
