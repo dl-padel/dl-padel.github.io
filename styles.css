@@ -1,9 +1,9 @@
-/* DL Padel — Material 3 styling. Court blue primary, ball yellow highlights. */
+/* DL Padel — Material 3 styling. Purple primary with purple-tinted neutrals, ball yellow highlights. */
 :root{
-  --primary:#2c5da3; --on-primary:#fff; --primary-container:#d7e3ff; --on-primary-container:#001b3e;
+  --primary:#6750a4; --on-primary:#fff; --primary-container:#eaddff; --on-primary-container:#21005d;
   --tertiary-container:#e2ec7a; --on-tertiary-container:#1a1d00;
-  --surface:#f9f9ff; --surface-1:#f1f3fb; --surface-2:#e9edf6; --surface-3:#e1e6f0;
-  --on-surface:#191c21; --on-surface-var:#43474f; --outline:#73777f; --outline-var:#c3c6cf;
+  --surface:#fef7ff; --surface-1:#f7f2fa; --surface-2:#f3edf7; --surface-3:#ece6f0;
+  --on-surface:#1d1b20; --on-surface-var:#49454f; --outline:#79747e; --outline-var:#cac4d0;
   --done-card:#e0f0e4; --done-card-hover:#d3e9d9;
   --gold:#9a6b00; --gold-c:#ffe08c; --on-gold-c:#2e2100;
   --win:#1b6d3b; --win-c:#c4efcf; --loss:#a3262d; --loss-c:#ffdad7; --draw-c:#e2e2e9;
@@ -12,10 +12,10 @@
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
-  --primary:#abc7ff; --on-primary:#002f64; --primary-container:#0b448a; --on-primary-container:#d7e3ff;
+  --primary:#d0bcff; --on-primary:#381e72; --primary-container:#4f378b; --on-primary-container:#eaddff;
   --tertiary-container:#454a00; --on-tertiary-container:#e2ec7a;
-  --surface:#111318; --surface-1:#191c21; --surface-2:#1d2026; --surface-3:#282a30;
-  --on-surface:#e1e2e9; --on-surface-var:#c3c6cf; --outline:#8d9199; --outline-var:#43474f;
+  --surface:#141218; --surface-1:#1d1b20; --surface-2:#211f26; --surface-3:#2b2930;
+  --on-surface:#e6e0e9; --on-surface-var:#cac4d0; --outline:#938f99; --outline-var:#49454f;
   --done-card:#16271c; --done-card-hover:#1c3123;
   --gold:#f5c542; --gold-c:#4a3800; --on-gold-c:#ffe08c;
   --win:#8fd8a3; --win-c:#0f4f27; --loss:#ffb3ad; --loss-c:#7a1a20; --draw-c:#3a3d44;
