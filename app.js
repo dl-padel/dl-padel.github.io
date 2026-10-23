@@ -222,6 +222,44 @@ function header(title, sub, o = {}) {
   if (o.admin) h += `<a class="icon-btn" href="${o.admin}" aria-label="Admin" title="Admin"><span class="ms">${S.isAdmin ? "edit_square" : "admin_panel_settings"}</span></a>`;
   return h + `</div></header>`;
 }
+// Homepage hero: the club logo, centred. Replaces the top bar on the homepage.
+let heroPlayed = false; // the logo animation plays once per visit, not on every live update
+const hero = () => `<header class="hero"><h1 class="sr">${SITE}</h1><img src="logo.svg?v=2" alt="DL Padel" width="359" height="345"${heroPlayed ? "" : ' class="pre"'}></header>`;
+// Subtle entrance built from the logo's parts, all at once: the court and lettering
+// fade in together while the two green letters slide in from either side.
+async function playHero() {
+  if (heroPlayed) return;
+  heroPlayed = true;
+  const img = app.querySelector(".hero img");
+  if (!img) return;
+  const show = () => img.classList.remove("pre");
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return show();
+  try {
+    const txt = await (await fetch(img.getAttribute("src"))).text();
+    const svg = new DOMParser().parseFromString(txt, "image/svg+xml").documentElement;
+    const paths = [...svg.querySelectorAll("path")];
+    if (svg.nodeName !== "svg" || paths.length < 4 || !img.isConnected || !svg.animate) return show();
+    svg.removeAttribute("width"); svg.removeAttribute("height");
+    svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "DL Padel");
+    img.replaceWith(svg);
+    const ease = "cubic-bezier(.2,.7,.2,1)", fill = "backwards";
+    const [court, ...rest] = paths, right = rest.pop(), left = rest.pop();
+    court.animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 600, easing: ease, fill });
+    court.style.transformOrigin = "center"; court.style.transformBox = "fill-box";
+    rest.forEach(p => p.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, easing: ease, fill }));
+    left.animate([{ opacity: 0, transform: "translateX(-24px)" }, { opacity: 1, transform: "none" }], { duration: 600, easing: ease, fill });
+    right.animate([{ opacity: 0, transform: "translateX(24px)" }, { opacity: 1, transform: "none" }], { duration: 600, easing: ease, fill });
+  } catch { show(); }
+}
+// Footer for public pages: WhatsApp group link, mock-serious small print and a quiet link to admin.
+const WHATSAPP_URL = "https://chat.whatsapp.com/KwsMD6jcUIwKcm8NZJQboH"; // group invite link; keep "Approve new participants" on in WhatsApp
+function footer() {
+  return `<footer class="foot"><hr>
+<p>© ${new Date().getFullYear()} DL Padel. All rights reserved.</p>
+<p>Results are final and binding, except when disputed loudly in the car park, or via WhatsApp. Any resemblance to professional padel is purely coincidental. No balls were harmed in the making of this site, though several were lost over the fence.</p>
+<a class="wa" href="${WHATSAPP_URL}" target="_blank" rel="noopener"><img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="" width="20" height="20">Complaints department</a>
+<a class="secret" href="#/admin">Super secret admin area</a></footer>`;
+}
 function wire() {
   const r = document.getElementById("refresh");
   if (r) r.onclick = () => { r.classList.add("spin"); setTimeout(() => location.reload(), 250); };
@@ -230,10 +268,10 @@ function wire() {
 // ----- Home -----
 function renderHome() {
   document.title = SITE;
-  if (!S.compsReady || !S.playersReady) { app.innerHTML = header(SITE, "") + `<div class="loading">Loading…</div>`; return; }
+  if (!S.compsReady || !S.playersReady) { app.innerHTML = hero() + `<div class="loading">Loading…</div>`; return; }
   const list = sortedComps();
-  let h = header(SITE, "Competitions, fixtures and tables", { admin: "#/admin" }) + `<main>`;
-  h += `<section><div class="sec-h"><h2>Competitions</h2><span>${list.length} so far</span></div>`;
+  let h = hero() + `<main>`;
+  h += `<section><div class="sec-h"><h2>David Lloyd Advanced Padel</h2></div>`;
   if (!list.length) h += `<div class="empty">No competitions yet. The first one appears here once an admin creates it.</div>`;
   else {
     const featured = list.find(([, c]) => status(c) === "live") || list.find(([, c]) => status(c) === "upcoming");
@@ -246,8 +284,11 @@ function renderHome() {
       return `<a class="comp-card st-${st}" href="#/c/${encodeURIComponent(id)}"><div class="card-main"><div class="chips">${pill}</div><h3>${esc(c.name)}</h3>${detailsHtml(c)}</div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
     }).join("") + `</div>`;
   }
-  h += `</section></main>`;
-  app.innerHTML = h; wire();
+  h += `</section>${footer()}</main>`;
+  const oldHero = heroPlayed && app.querySelector(".hero"); // keep the logo (and any running animation) across live redraws
+  app.innerHTML = h;
+  if (oldHero) app.querySelector(".hero").replaceWith(oldHero);
+  wire(); playHero();
 }
 
 // ----- Competition page -----
@@ -268,17 +309,18 @@ function defendingTeamIds(c, selfId) {
 }
 const crown = t => DEFENDING.has(t.id) ? '<span class="ms crown" role="img" aria-label="Defending champions" title="Defending champions">crown</span>' : "";
 
-function matchCard(c, m) {
+// A match is two table rows: court (spanning both), then each team with its score.
+function matchRows(c, m) {
   const A = teamById(c, m.a), B = teamById(c, m.b), done = played(m), sa = +m.sa, sb = +m.sb;
-  const side = (t, sc, o) => {
-    const cls = !done ? "" : sc > o ? " won" : sc < o ? " lost" : "";
+  const row = (t, sc, o, first) => {
+    const cls = [first ? "m1" : "m2", !done ? "" : sc > o ? "won" : sc < o ? "lost" : ""].filter(Boolean).join(" ");
     const pl = (t.name || "").trim() ? playersOf(t) : "";
-    return `<div class="side${cls}"><span class="nm">${esc(teamName(t))}${crown(t)}${pl ? `<small>${esc(pl)}</small>` : ""}</span>${done ? `<span class="sc num">${sc}</span>` : ""}</div>`;
+    return `<tr class="${cls}">${first ? `<td class="fx-court" rowspan="2"><small>Court</small><b class="num">${m.court}</b></td>` : ""}<td class="l fx-team"><span class="nm">${esc(teamName(t))}${crown(t)}${pl ? `<small>${esc(pl)}</small>` : ""}</span></td><td class="fx-sc num">${done ? sc : ""}</td></tr>`;
   };
-  return `<div class="match"><div class="court"><span><small>Court</small><b>${m.court}</b></span></div>${side(A, sa, sb)}${side(B, sb, sa)}</div>`;
+  return row(A, sa, sb, true) + row(B, sb, sa, false);
 }
 function roundBlock(c, r, list, isNext) {
-  return `<div class="round${isNext ? " next" : ""}"><div class="round-h">${isNext ? '<span class="chip upcoming">Up next</span>' : ""}<b>Round ${r}</b><span>·</span><span class="num">${roundTime(c, r)}</span></div>${list.map(m => matchCard(c, m)).join("")}</div>`;
+  return `<div class="round${isNext ? " next" : ""}"><div class="round-h">${isNext ? '<span class="chip upcoming">Up next</span>' : ""}<b>Round ${r}</b><span>·</span><span class="num">${roundTime(c, r)}</span></div><div class="card"><table class="fx"><colgroup><col class="c-court"><col><col class="c-sc"></colgroup><tbody>${list.map(m => matchRows(c, m)).join("")}</tbody></table></div></div>`;
 }
 function renderComp(id) {
   if (!S.compsReady || !S.playersReady) { app.innerHTML = header(SITE, "", { back: "#/" }) + `<div class="loading">Loading…</div>`; return; }
@@ -297,7 +339,7 @@ function renderComp(id) {
   h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th class="l">Form</th></tr></thead><tbody>`;
   st.forEach((r, i) => {
     const pl = (r.t.name || "").trim() ? playersOf(r.t) : "";
-    const form = r.form.length ? r.form.slice(-5).map(f => `<span class="fchip f${f}">${f}</span>`).join("") : `<span class="fnone">–</span>`;
+    const form = r.form.length ? r.form.slice(-5).map(f => { const lab = { W: "Win", L: "Loss", D: "Draw" }[f] || f; return `<span class="fchip f${f}" role="img" aria-label="${lab}" title="${lab}"></span>`; }).join("") : `<span class="fnone">–</span>`;
     const champ = i === 0 && status(c) === "done";
     h += `<tr${champ ? ' class="champ"' : i === 0 && playedCount ? ' class="lead"' : ""}><td class="pos num">${champ ? '<span class="ms trophy" aria-label="Winners" title="Winners">trophy</span>' : i + 1}</td><td class="team l"><span class="tname">${esc(teamName(r.t))}</span>${crown(r.t)}${pl ? `<span class="tplayers">${esc(pl)}</span>` : ""}</td><td>${r.P}</td><td class="w">${r.W}</td>${anyDraw ? `<td>${r.D}</td>` : ""}<td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td class="l"><div class="form">${form}</div></td></tr>`;
   });
@@ -314,10 +356,10 @@ function renderComp(id) {
   for (let r = R; r >= 1; r--) { const l = (byRound[r] || []).filter(played); if (l.length) { any = true; h += roundBlock(c, r, l); } }
   if (!any) h += `<div class="empty">No scores yet. Results appear here as soon as they are entered.</div>`;
 
-  h += `</section></main>`;
+  h += `</section>${footer()}</main>`;
 
   const nav = (t, icon, label) => `<button data-t="${t}"><span class="pill"><span class="ms" aria-hidden="true">${icon}</span></span>${label}</button>`;
-  h += `<nav class="nav" aria-label="Sections"><div class="nav-in">${nav("table", "leaderboard", "Table")}${nav("fixtures", "calendar_month", "Fixtures")}${nav("results", "task_alt", "Results")}</div></nav>`;
+  h += `<nav class="nav" aria-label="Sections"><div class="nav-in">${nav("table", "leaderboard", "Table")}${nav("fixtures", "calendar_month", "Fixtures")}${nav("results", "event_available", "Results")}</div></nav>`;
 
   const y = scrollY;
   app.innerHTML = h; wire();

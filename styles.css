@@ -1,27 +1,20 @@
-/* DL Padel — Material 3 styling. Purple primary with purple-tinted neutrals, ball yellow highlights. */
+/* DL Padel — Material 3 styling, dark only. Vivid purple and padel-ball yellow-green on purple-tinted near-black. */
 :root{
-  --primary:#6750a4; --on-primary:#fff; --primary-container:#eaddff; --on-primary-container:#21005d;
-  --secondary-container:#e8def8; --on-secondary-container:#1d192b;
-  --tertiary-container:#e2ec7a; --on-tertiary-container:#1a1d00;
-  --surface:#fef7ff; --surface-1:#f7f2fa; --surface-2:#f3edf7; --surface-3:#ece6f0;
-  --on-surface:#1d1b20; --on-surface-var:#49454f; --outline:#79747e; --outline-var:#cac4d0;
-  --done-card:#e0f0e4; --done-card-hover:#d3e9d9;
-  --gold:#9a6b00; --gold-c:#ffe08c; --on-gold-c:#2e2100;
-  --win:#1b6d3b; --win-c:#c4efcf; --loss:#a3262d; --loss-c:#ffdad7; --draw-c:#e2e2e9;
+  /* Dark only. Generated with Material colour utilities from two brand seeds: purple #8c3cff and padel ball #d4f22c. */
+  --primary:#d5baff; --on-primary:#42008a; --primary-container:#8c3cff; --on-primary-container:#faf1ff;
+  --secondary-container:#4f3f68; --on-secondary-container:#e8dcff;
+  --tertiary-container:#667700; --on-tertiary-container:#eaff81;
+  --ball:#d2f02a; --on-ball:#222900;
+  --surface:#15121b; --surface-1:#1e1a24; --surface-2:#221e28; --surface-3:#2d2833;
+  --on-surface:#e8dfee; --on-surface-var:#cdc2d8; --outline:#968da1; --outline-var:#4b4455;
+  --done-card:#16271c; --done-card-hover:#1c3123;
+  --gold:#d2f02a; --gold-c:#d2f02a; --on-gold-c:#222900; /* winners use the padel-ball colour */
+  --champ-row:#364000; --on-champ-row:#eaff81; /* dark shade of the ball colour for the winners' table row */
+  --win:#8fd8a3; --win-c:#0f4f27; --loss:#ffb3ad; --loss-c:#7a1a20; --draw-c:#3a3d44;
   --font:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
   --nav-h:80px;
-  color-scheme:light;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme:dark){:root{
-  --primary:#d0bcff; --on-primary:#381e72; --primary-container:#4f378b; --on-primary-container:#eaddff;
-  --secondary-container:#4a4458; --on-secondary-container:#e8def8;
-  --tertiary-container:#454a00; --on-tertiary-container:#e2ec7a;
-  --surface:#141218; --surface-1:#1d1b20; --surface-2:#211f26; --surface-3:#2b2930;
-  --on-surface:#e6e0e9; --on-surface-var:#cac4d0; --outline:#938f99; --outline-var:#49454f;
-  --done-card:#16271c; --done-card-hover:#1c3123;
-  --gold:#f5c542; --gold-c:#4a3800; --on-gold-c:#ffe08c;
-  --win:#8fd8a3; --win-c:#0f4f27; --loss:#ffb3ad; --loss-c:#7a1a20; --draw-c:#3a3d44;
-  color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--surface);color:var(--on-surface);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh}
@@ -76,8 +69,8 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .chip.upcoming{background:var(--surface-3);color:var(--on-surface)}
 .comp-card .chip.upcoming{background:var(--surface-3);color:var(--on-surface)}
 .chip.done{background:var(--win-c);color:var(--win)}
-.chip.gold{background:var(--gold-c);color:var(--on-gold-c)}
-.chip.gold .ms{color:var(--gold);font-variation-settings:"FILL" 1}
+.chip.gold{background:var(--champ-row);color:var(--on-champ-row)}
+.chip.gold .ms{color:var(--ball);font-variation-settings:"FILL" 1}
 .chip.neutral{background:var(--surface-3);color:var(--on-surface-var)}
 
 /* Standings */
@@ -86,20 +79,22 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 th{font-size:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--on-surface-var);text-align:center;padding:12px 6px 8px}
 th.l,td.l{text-align:left}
-td{text-align:center;padding:10px 6px;border-top:1px solid var(--outline-var)}
+td{text-align:center;padding:10px 6px;line-height:24px;border-top:1px solid var(--outline-var)}
 td.pos{width:28px;padding-left:14px;color:var(--on-surface-var);font-weight:500}
 tr.lead td.pos{color:var(--primary)}
-tr.champ td{background:var(--gold-c);color:var(--on-gold-c);border-top-color:transparent}
+tr.champ td{background:var(--champ-row);color:var(--on-champ-row);border-top-color:transparent}
 tr.champ .tplayers{color:inherit;opacity:.8}
-.crown{font-size:16px;width:16px;height:16px;line-height:16px;color:var(--gold);font-variation-settings:"FILL" 1;margin-left:4px;vertical-align:-2px}
+.crown{font-size:12px;width:12px;height:12px;line-height:12px;color:var(--gold);font-variation-settings:"FILL" 1;margin-left:3px;vertical-align:6px}
 .trophy{font-size:20px;width:20px;color:var(--gold);font-variation-settings:"FILL" 1;vertical-align:-4px}
+tr.champ .trophy,tr.champ .crown{color:var(--ball)}
 td.team{min-width:130px}
-.tname{font-weight:600}
+.tname{font-weight:400}
 .tplayers{display:block;font-size:12px;color:var(--on-surface-var)}
 td.w{font-weight:700}
-.form{display:flex;gap:3px;justify-content:flex-start;padding-right:8px}
-.fchip{width:20px;height:20px;border-radius:6px;font-size:11px;font-weight:700;display:grid;place-items:center}
-.fW{background:var(--win-c);color:var(--win)} .fL{background:var(--loss-c);color:var(--loss)} .fD{background:var(--draw-c);color:var(--on-surface-var)}
+.form{display:flex;gap:5px;align-items:center;justify-content:flex-start;padding-right:8px}
+.fchip{width:12px;height:12px;border-radius:50%;flex:none}
+/* Form dots: vivid green win (kept separate from the brand ball green), vivid red loss, grey draw */
+.fW{background:#00cc58} .fL{background:#ff4260} .fD{background:var(--outline)}
 .fnone{color:var(--outline);font-size:13px}
 .streak{display:inline-block;margin-left:6px;font-size:11px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--tertiary-container);color:var(--on-tertiary-container);vertical-align:1px}
 
@@ -108,16 +103,21 @@ td.w{font-weight:700}
 .round + .round{margin-top:16px}
 .round-h{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:500;line-height:20px;min-height:24px;color:var(--on-surface-var);padding:0 4px}
 .round-h b{color:var(--on-surface);font-weight:600}
-.match{background:var(--surface-1);border-radius:16px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center}
-.court{grid-row:span 2;width:44px;height:44px;border-radius:12px;background:var(--primary-container);color:var(--on-primary-container);display:grid;place-items:center;text-align:center;line-height:1}
-.court small{display:block;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-.court b{font-size:18px}
-.side{display:flex;align-items:center;gap:10px;min-width:0;height:24px;line-height:24px}
-.side .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.side .nm small{color:var(--on-surface-var);font-size:12px;margin-left:6px}
-.side .sc{font-weight:700;font-size:18px;line-height:24px;min-width:28px;text-align:right}
-.side.won .nm{font-weight:600}
-.side.lost{color:var(--on-surface-var)}
+table.fx{table-layout:fixed}
+table.fx col.c-court{width:64px}
+table.fx col.c-sc{width:56px}
+table.fx tbody tr:first-child td{border-top:0}
+table.fx td{line-height:24px;padding:10px 6px}
+table.fx tr.m2 td{border-top:1px solid color-mix(in srgb,var(--outline-var) 45%,transparent)}
+table.fx td.fx-court{color:var(--primary);line-height:1.1}
+.fx-court small{display:block;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.fx-court b{display:block;font-size:18px;font-weight:700;margin-top:2px}
+.fx-team .nm{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-team .nm small{color:var(--on-surface-var);font-size:12px;margin-left:6px}
+.fx-sc{font-weight:400}
+table.fx tr.won .nm,table.fx tr.won .fx-sc{font-weight:600}
+table.fx tr.won .fx-sc{color:var(--ball)}
+table.fx tr.lost td.fx-team,table.fx tr.lost td.fx-sc{color:var(--on-surface-var)}
 .empty{background:var(--surface-1);border-radius:16px;padding:20px;color:var(--on-surface-var);text-align:center}
 
 /* Bottom navigation bar */
@@ -126,7 +126,7 @@ td.w{font-weight:700}
 .nav button{border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--on-surface-var);font-size:12px;font-weight:500}
 .nav .pill{width:64px;height:32px;border-radius:16px;display:grid;place-items:center;transition:background .2s}
 .nav button.on{color:var(--on-surface)}
-.nav button.on .pill{background:var(--secondary-container);color:var(--on-secondary-container)}
+.nav button.on .pill{background:var(--ball);color:var(--on-ball)}
 .nav button.on .ms{font-variation-settings:"FILL" 1}
 
 /* Admin */
@@ -142,9 +142,9 @@ td.w{font-weight:700}
 .seg{display:inline-flex;border:1px solid var(--outline);border-radius:20px;overflow:hidden;align-self:flex-start;flex-wrap:wrap}
 .seg button{border:0;background:transparent;padding:8px 16px;cursor:pointer;font-weight:500;font-size:14px;display:flex;align-items:center;gap:6px}
 .seg button + button{border-left:1px solid var(--outline)}
-.seg button.on{background:var(--tertiary-container);color:var(--on-tertiary-container)}
+.seg button.on{background:var(--ball);color:var(--on-ball)}
 .btn{border:0;border-radius:20px;padding:10px 20px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:40px;text-decoration:none;justify-content:center}
-.btn.filled{background:var(--primary);color:var(--on-primary)}
+.btn.filled{background:var(--primary-container);color:var(--on-primary-container)}
 .btn.tonal{background:var(--surface-3);color:var(--on-surface)}
 .btn.text{background:transparent;color:var(--primary);padding-inline:12px}
 .btn.danger{background:var(--loss-c);color:var(--loss)}
@@ -172,3 +172,13 @@ td.w{font-weight:700}
 .msg.err{background:var(--loss-c);color:var(--loss)}
 .signin{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.foot{margin-top:40px;padding-bottom:8px;color:var(--on-surface-var);font-size:12px;line-height:1.5}
+.foot hr{border:0;border-top:1px solid var(--outline-var);margin:0 0 60px}
+.foot p{margin:0 0 8px;max-width:60ch}
+.foot a.secret{color:var(--outline);text-decoration:underline;text-underline-offset:2px}
+.foot a.secret{display:inline-block}
+.foot a.wa{display:flex;width:fit-content;align-items:center;gap:8px;margin:16px 0;color:var(--on-surface);font-size:14px;font-weight:500;text-decoration:none}
+.foot a.wa img{width:20px;height:20px;flex:none}
+.hero{display:flex;justify-content:center;padding:calc(48px + env(safe-area-inset-top,0px)) 16px 32px}
+.hero img,.hero svg{display:block;width:min(180px,48vw);height:auto}
+.hero img.pre{opacity:0}

@@ -20,10 +20,15 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 - Defending champions: a team with the same two players as the winners of the most recent finished comp before this one gets a gold crown, worked out automatically.
 
 ## UI decisions (agreed with Piers, keep these)
-- Material 3 look, Roboto Flex plus Material Symbols Rounded. Purple primary (#6750a4 light / #d0bcff dark), purple-tinted neutrals, light-purple active nav pill. Supports light and dark.
-- Homepage: neutral grey cards only, with colour only on pills. Exactly **one pill** per card: gold 🏆 winners (finished), red Live, or grey Upcoming. Title 24px. One inline details row: calendar date ("Sun, 27 Sept"), clock time ("8am"), 👥 "N teams"; 16px icons, 4px icon gap, 16px between items.
+- Material 3 look, Roboto Flex plus Material Symbols Rounded. **Dark mode only**, vibrant brand colours generated with Material colour utilities from two seeds: purple `#8c3cff` and padel-ball yellow-green `#d4f22c`. Vivid purple (`--primary-container`) for filled buttons, lilac `--primary` for text accents and court numbers, ball colour (`--ball`) for the active nav pill, selected segmented buttons, trophy/crown icons and winning scores, purple-tinted near-black surfaces. Keep the ball green for brand moments only (form-guide win dots use a separate green).
+- Winners styling (homepage pill and the table's winning row): dark olive `--champ-row` `#364000` with pale lime text `#eaff81` and a ball-green trophy. Defending champions crown is small (12px) and raised like a seed number.
+- Homepage: no top bar. A hero with the centred logo (`logo.svg`, 180px wide) whose parts animate in together once per visit (court and lettering fade, green letters slide in from the sides; skipped for reduced motion; the hero node is kept across live redraws). Section title "David Lloyd Advanced Padel", no count. Neutral grey cards only, with colour only on pills. Exactly **one pill** per card: olive 🏆 winners (finished), red Live, or grey Upcoming. Title 24px. One inline details row: calendar date ("Sun, 27 Sept"), clock time ("8am"), 👥 "N teams"; 16px icons, 4px icon gap, 16px between items.
 - Comp page header uses the same shared details row (`detailsHtml`). No "|" dividers.
-- Comp page sections: Table, Fixtures (next round first with a small grey "Up next" label, styled like the others), Results (latest first). Sticky bottom nav with those 3 tabs, plus a refresh button in the header.
+- Comp page sections: Table, Fixtures (next round first with a small grey "Up next" label, styled like the others), Results (latest first). Sticky bottom nav with those 3 tabs (icons leaderboard, calendar_month, event_available), plus a refresh button in the header.
+- Fixtures and results are tables, one card per round, no header row: a court column (small "COURT" label over the number, spanning both rows), then one row per team with name and score. Faint line between the two teams, normal line between games. Scores same size as names; winner name and score semibold, winning score in ball green; loser greyed, regular weight.
+- Standings: team names regular weight. Form guide is plain 12px dots: green `#00cc58` win, red `#ff4260` loss, grey draw.
+- All table rows 44px (10px padding, 24px line height).
+- Footer on public pages: divider (40px above, 60px below), © line, mock-serious small print, WhatsApp "Complaints department" link (group invite; keep "Approve new participants" on), then a subtle "Super secret admin area" link. No admin icon in the homepage header.
 - No streak badges or other extra labels in the table.
 - Keep row heights fixed so played and unplayed games space out the same.
 
@@ -35,3 +40,4 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 ## Working notes
 - Commit as Claude with the session attribution lines; push straight to `main` (Piers reviews on his phone).
 - Test logic with jsdom and stubbed Firebase before pushing. I can't see the live site, so ask for screenshots.
+- Local editing: Piers keeps a clone at `~/Documents/DL-Padel/dl-padel.github.io` on his Mac and previews with `python3 -m http.server 8000` (http://localhost:8000). Edit there via the device shell, then push from the cloud clone. Local admin saves still hit the live database.
