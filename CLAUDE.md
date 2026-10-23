@@ -40,4 +40,5 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 ## Working notes
 - Commit as Claude with the session attribution lines; push straight to `main` (Piers reviews on his phone).
 - Test logic with jsdom and stubbed Firebase before pushing. I can't see the live site, so ask for screenshots.
+- Home-screen icons: `apple-touch-icon.png` (180px), `icon-192.png`, `icon-512.png`, rendered from `logo.svg` on `#15121b`, plus `manifest.webmanifest`. Re-render them if the logo changes. Browser tab icon is `icon-192.png`.
 - Local editing: Piers keeps a clone at `~/Documents/DL-Padel/dl-padel.github.io` on his Mac and previews with `python3 -m http.server 8000` (http://localhost:8000). Edit there via the device shell, then push from the cloud clone. Local admin saves still hit the live database.
