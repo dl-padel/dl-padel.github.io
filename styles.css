@@ -230,3 +230,11 @@ table.lt .form{gap:4px;padding-right:12px}
 .more-link{display:flex;align-items:center;justify-content:center;gap:2px;margin-top:8px;min-height:44px;border-radius:12px;color:var(--primary);font-size:14px;font-weight:500;text-decoration:none}
 .more-link:hover{background:var(--surface-1)}
 .more-link .ms{font-size:20px;width:20px}
+/* Full league tables: wider, scroll sideways with rank and name pinned */
+table.lt.full th,table.lt.full td{white-space:nowrap}
+table.lt.full th:not(.l),table.lt.full td:not(.l){min-width:36px}
+table.lt.full .pos{position:sticky;left:0;z-index:1;width:36px;min-width:36px;max-width:36px;background:var(--surface-1)}
+table.lt.full .team{position:sticky;left:36px;z-index:1;background:var(--surface-1);box-shadow:inset -1px 0 0 var(--outline-var);padding-right:10px}
+table.lt.full tr.sep td{background:var(--surface)}
+table.lt.full tr.sep td span{position:sticky;left:14px}
+.key{margin:10px 4px 0}

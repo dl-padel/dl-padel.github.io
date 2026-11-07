@@ -808,20 +808,24 @@ function leagueGateMsg() {
 
 // The league page shows the top of each table; the full tables have their own pages.
 const TOP_N = 10;
-function playersTable(rows, limit = Infinity) {
-  let h = `<div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th></th><th class="l">Player</th><th>P</th><th>W</th><th>L</th><th>Win%</th><th class="l">Form</th></tr></thead><tbody>`;
+// Full tables add sets and games for and against; they scroll sideways with
+// the position and name columns pinned.
+const extraHead = full => full ? `<th title="Sets won">SF</th><th title="Sets lost">SA</th><th title="Games won">GF</th><th title="Games lost">GA</th>` : "";
+const extraCells = (r, full) => full ? `<td>${r.SW}</td><td>${r.SL}</td><td>${r.GW}</td><td>${r.GL}</td>` : "";
+function playersTable(rows, limit = Infinity, full = false) {
+  let h = `<div class="card"><div class="tbl-wrap"><table class="lt${full ? " full" : ""}"><thead><tr><th class="pos"></th><th class="l team">Player</th><th>P</th><th>W</th><th>L</th><th>Win%</th>${extraHead(full)}<th class="l">Form</th></tr></thead><tbody>`;
   let shownSep = false;
   rows.slice(0, limit).forEach((r, i) => {
     const ok = r.P >= LEAGUE_MIN;
-    if (!ok && !shownSep) { shownSep = true; h += `<tr class="sep"><td colspan="7">Fewer than ${LEAGUE_MIN} matches · not ranked yet</td></tr>`; }
-    h += `<tr${ok && i === 0 ? ' class="lead"' : ""}><td class="pos num">${ok ? i + 1 : ""}</td><td class="team l">${plink(r.id)}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td><td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
+    if (!ok && !shownSep) { shownSep = true; h += `<tr class="sep"><td colspan="${full ? 11 : 7}"><span>Fewer than ${LEAGUE_MIN} matches · not ranked yet</span></td></tr>`; }
+    h += `<tr${ok && i === 0 ? ' class="lead"' : ""}><td class="pos num">${ok ? i + 1 : ""}</td><td class="team l">${plink(r.id)}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td>${extraCells(r, full)}<td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
   });
   return h + `</tbody></table></div></div>`;
 }
-function pairsTable(rows, limit = Infinity) {
-  let h = `<div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th></th><th class="l">Pair</th><th>P</th><th>W</th><th>L</th><th>Win%</th><th class="l">Form</th></tr></thead><tbody>`;
+function pairsTable(rows, limit = Infinity, full = false) {
+  let h = `<div class="card"><div class="tbl-wrap"><table class="lt${full ? " full" : ""}"><thead><tr><th class="pos"></th><th class="l team">Pair</th><th>P</th><th>W</th><th>L</th><th>Win%</th>${extraHead(full)}<th class="l">Form</th></tr></thead><tbody>`;
   rows.slice(0, limit).forEach((r, i) => {
-    h += `<tr${i === 0 ? ' class="lead"' : ""}><td class="pos num">${i + 1}</td><td class="team l">${plink(r.ids[0])} &amp; ${plink(r.ids[1])}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td><td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
+    h += `<tr${i === 0 ? ' class="lead"' : ""}><td class="pos num">${i + 1}</td><td class="team l">${plink(r.ids[0])} &amp; ${plink(r.ids[1])}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td>${extraCells(r, full)}<td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
   });
   return h + `</tbody></table></div></div>`;
 }
@@ -835,7 +839,7 @@ function renderLeagueTable(kind) {
   const st = leagueStats(), rows = isP ? st.playerRows : st.pairRows;
   let h = top(`League · ${rows.length} ${kind} · ${isP ? "by win %" : "by wins"}`) + `<main>`;
   if (st.matches.some(m => m.sample)) h += `<div class="msg sample"><span class="ms" aria-hidden="true">science</span><span><b>Sample data.</b> These matches are made up to show how the league works.</span></div>`;
-  h += `<section>${rows.length ? (isP ? playersTable(rows) : pairsTable(rows)) : `<div class="empty">No matches yet.</div>`}</section>`;
+  h += `<section>${rows.length ? (isP ? playersTable(rows, Infinity, true) : pairsTable(rows, Infinity, true)) + `<p class="hint key">SF/SA sets won and lost · GF/GA games won and lost${isP ? ` · ranked by win %, then wins, set difference, game difference; ${LEAGUE_MIN} matches to be ranked` : " · ranked by wins, then win %, set difference, game difference"}</p>` : `<div class="empty">No matches yet.</div>`}</section>`;
   h += `${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
   const y = scrollY;
   app.innerHTML = h; wire(); scrollTo(0, y);
