@@ -5,6 +5,7 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 ## Stack
 - Plain `index.html`, `styles.css`, `app.js` (ES module). No build step. Firebase JS SDK 10.12.2 loaded from gstatic.
 - Firebase project `dl-padel` (Spark/free). Firestore in europe-west2, Google Auth only. Config is in `app.js` (public by design).
+- **Icons are subset:** the Material Symbols link in `index.html` has `icon_names=` (alphabetical, comma-separated). Add any new icon name there or it shows as text. Cuts the font from ~540 KB to ~6 KB.
 - **Cache busting:** bump `?v=N` on both `styles.css` and `app.js` in `index.html` on every change, or phones keep the old version.
 
 ## Data (Firestore)
@@ -35,7 +36,6 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 ## Admin
 - `#/admin`: Google sign-in only (on iPhone use Safari; Chrome's pop-up fails). Add or rename players, list and create comps.
 - `#/admin/c/{id}`: details, 4/6 team switch (rebuilds fixtures and clears scores after confirming), player dropdowns per team, Shuffle teams (random partners and team numbers from the players picked; a ticked-by-default box keeps the defending champions paired, shown only when both are picked; locked once any score is entered, no separate Start button), Rebuild fixtures (club order), score entry, delete. Save writes the whole comp doc; viewers update live.
-- `PAST_IMPORTS` in app.js is a one-off import button for September 2026; it hides once that comp exists.
 
 ## Working notes
 - Commit as Claude with the session attribution lines; push straight to `main` (Piers reviews on his phone).

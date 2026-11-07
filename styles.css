@@ -33,10 +33,6 @@ a{color:var(--primary)}
 .bar-title h1{margin:0;font-size:22px;font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-title p{margin:0;font-size:13px;color:var(--on-surface-var);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-sub{margin-top:4px;font-size:13px;color:var(--on-surface)}
-.when{display:inline-flex;align-items:center;gap:2px 16px;flex-wrap:wrap}
-.when-i{display:inline-flex;align-items:center;gap:4px}
-.when-i .ms{font-size:16px;width:16px;height:16px;line-height:16px;transform:translateY(-1px)}
-.when-sep{opacity:.5}
 .icon-btn{width:48px;height:48px;border-radius:50%;border:0;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--on-surface-var);flex:none;text-decoration:none}
 .icon-btn:hover{background:color-mix(in srgb,var(--on-surface) 8%,transparent)}
 .icon-btn.spin .ms{animation:spin .7s linear infinite}
@@ -71,7 +67,6 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .chip.done{background:var(--win-c);color:var(--win)}
 .chip.gold{background:var(--champ-row);color:var(--on-champ-row)}
 .chip.gold .ms{color:var(--ball);font-variation-settings:"FILL" 1}
-.chip.neutral{background:var(--surface-3);color:var(--on-surface-var)}
 
 /* Standings */
 .card{background:var(--surface-1);border-radius:16px;overflow:hidden}
@@ -94,7 +89,6 @@ td.w{font-weight:700}
 /* Form dots: vivid green win (kept separate from the brand ball green), vivid red loss, grey draw */
 .fW{background:#00cc58} .fL{background:#ff4260} .fD{background:var(--outline)}
 .fnone{color:var(--outline);font-size:13px}
-.streak{display:inline-block;margin-left:6px;font-size:11px;font-weight:600;padding:1px 6px;border-radius:8px;background:var(--tertiary-container);color:var(--on-tertiary-container);vertical-align:1px}
 
 /* Matches */
 .round{display:flex;flex-direction:column;gap:8px}
