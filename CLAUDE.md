@@ -31,7 +31,7 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 - Player profile `#/p/{id}` (tap any league name): played/won/win %, current and best streak, form, sets, games, bagels served/eaten, favourite partner (most matches together), biggest rival (most played against), partner and opponent tables, last 10 matches, competition played/won.
 - League matches can have an optional `time` ("HH:MM") and `court` (1–6); profiles show Favourite court once courts are recorded. Sample data includes times and courts.
 - Match entry `#/league/add`, edit `#/league/m/{id}` (scorers and admins; + in the league header, edit icon on each match, "Scorers' entrance" footer link). Validates set scores (6-0..6-4, 7-5, 7-6), optional tiebreak for 7-6, 2 sets to win, no 3rd set after 2-0.
-- Sample data: `#/admin` → League sample data → Load (about 25 made-up matches over the last 5 weeks, everyone 5–10 matches, 3 regular pairs, seeds retried until there's a 🔥, bagels and tiebreaks). Docs carry `sample: true`; the league page shows a "Sample data" banner while any exist; Remove deletes only those.
+- Sample data: `#/admin` → League sample data → Load (about 25 made-up matches over the last 5 weeks, with times and courts, everyone 5–10 matches, 3 regular pairs, seeds retried until there's a 🔥, bagels and tiebreaks). Docs carry `sample: true`; the league page shows a "Sample data" banner while any exist; Remove deletes only those. While a set exists there's also "Make a new sample set", which swaps the old sample matches for a fresh random set (random starting seed) in one batch.
 - Future ideas Piers mentioned: planned fixtures / formal league with only league games counting, more stats.
 
 ## UI decisions (agreed with Piers, keep these)

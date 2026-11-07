@@ -489,7 +489,7 @@ function renderAdmin() {
   h += `<section><div class="sec-h"><h2>League sample data</h2></div><div class="card">`;
   if (!S.leagueReady) h += `<p class="hint">Loading…</p>`;
   else if (S.leagueError) h += `<p class="hint">Couldn't load the league (${esc(S.leagueError.code || "error")}).</p>`;
-  else if (nSample) h += `<p class="hint">${nSample} made-up matches are in the league, with a banner saying so. Remove them before real matches start. Real matches aren't touched.</p><button class="btn danger" id="rmsample" style="align-self:flex-start"><span class="ms">delete</span>Remove sample data</button>`;
+  else if (nSample) h += `<p class="hint">${nSample} made-up matches are in the league, with a banner saying so. Remove them before real matches start. Real matches aren't touched.</p><div class="row"><button class="btn tonal" id="newsample"><span class="ms">shuffle</span>Make a new sample set</button><button class="btn danger" id="rmsample"><span class="ms">delete</span>Remove sample data</button></div>`;
   else if (nPlayers < 8) h += `<p class="hint">Add at least 8 players to make sample data.</p>`;
   else h += `<p class="hint">Fills the league with about 25 made-up matches from the last five weeks, using everyone in the player list, so people can see how the tables, matches and profiles work. Everyone viewing the site sees them. You can remove them all with one tap.</p><button class="btn tonal" id="addsample" style="align-self:flex-start"><span class="ms">science</span>Load sample data</button>`;
   h += `</div></section>`;
@@ -503,6 +503,7 @@ function renderAdmin() {
     render(); scrollTo(0, 0);
   }; };
   sampleBtn(document.getElementById("addsample"), loadSampleLeague, n => `Added ${n} sample matches. Have a look at the league.`);
+  sampleBtn(document.getElementById("newsample"), loadSampleLeague, n => `Swapped in a new sample set of ${n} matches, with times and courts.`);
   sampleBtn(document.getElementById("rmsample"), removeSampleLeague, n => `Removed ${n} sample matches.`);
   document.getElementById("adds").onsubmit = async e => {
     e.preventDefault();
@@ -1184,10 +1185,10 @@ function makeSampleLeague(ids, seed) {
 }
 // Try seeds until the data shows everything off: everyone on 5-10 matches,
 // a fire streak, a few bagels and tiebreaks.
-function goodSampleLeague(ids) {
+function goodSampleLeague(ids, first = 1) {
   const saved = S.league;
   try {
-    for (let seed = 1; seed < 500; seed++) {
+    for (let seed = first; seed < first + 500; seed++) {
       const list = makeSampleLeague(ids, seed);
       S.league = Object.fromEntries(list.map((m, i) => ["s" + i, m]));
       const st = leagueStats(), rows = Object.values(st.players);
@@ -1199,10 +1200,13 @@ function goodSampleLeague(ids) {
   } finally { S.league = saved; }
 }
 const sampleIds = () => Object.entries(S.league).filter(([, m]) => m.sample).map(([id]) => id);
+// Loads a sample set; any existing sample matches are swapped out in the same
+// write, so "Make a new sample set" is one tap. Each set is a different random one.
 async function loadSampleLeague() {
-  const list = goodSampleLeague(Object.keys(S.players));
+  const list = goodSampleLeague(Object.keys(S.players), 1 + Math.floor(Math.random() * 1e6));
   if (!list) throw new Error("couldn't build sample data");
   const b = writeBatch(db);
+  sampleIds().forEach(id => b.delete(doc(db, "league", id)));
   list.forEach(m => b.set(doc(collection(db, "league")), { ...m, updatedBy: S.user.email }));
   await b.commit();
   return list.length;
