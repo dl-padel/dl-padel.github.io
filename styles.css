@@ -13,6 +13,8 @@
   --win:#8fd8a3; --win-c:#0f4f27; --loss:#ffb3ad; --loss-c:#7a1a20; --draw-c:#3a3d44;
   --font:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
   --nav-h:80px;
+  --row-alt:color-mix(in srgb,var(--on-surface) 4%,var(--surface-1)); /* alternate table rows and the winners' row in match cards */
+  --card-line:var(--outline-var); /* 1px border around cards and tables */
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -74,10 +76,11 @@ section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 th{font-size:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--on-surface-var);text-align:center;padding:12px 6px 8px}
 th.l,td.l{text-align:left}
-td{text-align:center;padding:10px 6px;line-height:24px;border-top:1px solid var(--outline-var)}
+td{text-align:center;padding:10px 6px;line-height:24px}
+tbody tr:nth-child(even) td{background:var(--row-alt)}
 td.pos{width:28px;padding-left:14px;color:var(--on-surface-var);font-weight:500}
 tr.lead td.pos{color:var(--primary)}
-tr.champ td{background:var(--champ-row);color:var(--on-champ-row);border-top-color:transparent}
+tbody tr.champ td{background:var(--champ-row);color:var(--on-champ-row)}
 .crown{font-size:12px;width:12px;height:12px;line-height:12px;color:var(--gold);font-variation-settings:"FILL" 1;margin-left:3px;vertical-align:6px}
 .trophy{font-size:20px;width:20px;color:var(--gold);font-variation-settings:"FILL" 1;vertical-align:-4px}
 tr.champ .trophy,tr.champ .crown{color:var(--ball)}
@@ -210,6 +213,7 @@ table.lt.full th,table.lt.full td{white-space:nowrap}
 table.lt.full th:not(.l),table.lt.full td:not(.l){min-width:36px}
 table.lt.full .pos{position:sticky;left:0;z-index:1;width:36px;min-width:36px;max-width:36px;background:var(--surface-1)}
 table.lt.full .team{position:sticky;left:36px;z-index:1;background:var(--surface-1);box-shadow:inset -1px 0 0 var(--outline-var);padding-right:10px}
+table.lt.full tbody tr:nth-child(even) .pos,table.lt.full tbody tr:nth-child(even) .team{background:var(--row-alt)}
 table.lt.full tr.sep td{background:var(--surface)}
 table.lt.full tr.sep td span{position:sticky;left:14px}
 .key{margin:10px 4px 0}
@@ -223,7 +227,6 @@ details.week summary:hover{background:var(--surface-2)}
 details.week summary .ms{color:var(--on-surface-var);transition:transform .2s}
 details.week[open] summary .ms{transform:rotate(180deg)}
 .week-body{padding:4px 12px 16px}
-.week-body .mcard{background:var(--surface-2)}
 main > details.week + details.week{margin-top:-18px}
 
 /* Match cards (league and competitions): header, the two sides, footer */
@@ -237,7 +240,8 @@ table.mc-t col.c-w{width:30px}
 table.mc-t col.c-set{width:34px}
 table.mc-t col.c-sc{width:48px}
 table.mc-t td{line-height:24px;padding:10px 4px;border-top:0}
-table.mc-t tr + tr td{border-top:1px solid color-mix(in srgb,var(--outline-var) 45%,transparent)}
+table.mc-t tbody tr td{background:none}
+table.mc-t tbody tr.won td{background:var(--row-alt)}
 table.mc-t td.mc-nm{padding-left:16px}
 table.mc-t td:last-child{padding-right:14px}
 .mc-nm .nm{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -247,3 +251,6 @@ table.mc-t td.sw{color:var(--on-surface);font-weight:600}
 table.mc-t td.set sup{font-size:10px;line-height:0;margin-left:1px;font-weight:400}
 table.mc-t tr.won .nm{font-weight:600}
 table.mc-t tr.lost td.mc-nm{color:var(--on-surface-var)}
+
+/* Borders around cards and tables instead of lines between rows */
+.card,.mcard,.comp-card,.stat,.hl,details.week,.empty{border:1px solid var(--card-line)}
