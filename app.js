@@ -26,7 +26,7 @@ const S = {
   draft: null, draftId: null, dirty: false, pending: null, notice: null, saving: false,
   keepChamps: true,
   isScorer: false, scorerChecked: false,
-  league: {}, leagueReady: false, leagueError: null, leagueShow: 30,
+  league: {}, leagueReady: false, leagueError: null, openWeeks: new Set(),
   ldraft: null, ldraftId: null, carry: null,
   scorers: null, scorersError: null,
 };
@@ -196,6 +196,7 @@ function route() {
   if (p[0] === "c" && p[1]) return { name: "comp", id: p[1] };
   if (p[0] === "comps") return { name: "comps" };
   if (p[0] === "league" && (p[1] === "players" || p[1] === "pairs")) return { name: "leagueTable", kind: p[1] };
+  if (p[0] === "league" && p[1] === "matches") return { name: "leagueMatches" };
   if (p[0] === "league" && p[1] === "add") return { name: "leagueEdit", id: "new" };
   if (p[0] === "league" && p[1] === "m" && p[2]) return { name: "leagueEdit", id: p[2] };
   if (p[0] === "league") return { name: "league" };
@@ -229,6 +230,7 @@ function render() {
   if (r.name === "editComp") return renderEditComp(r.id);
   if (r.name === "league") { ensureLeague(); return renderLeague(); }
   if (r.name === "leagueTable") { ensureLeague(); return renderLeagueTable(r.kind); }
+  if (r.name === "leagueMatches") { ensureLeague(); return renderLeagueMatches(); }
   if (r.name === "leagueEdit") { ensureLeague(); return renderLeagueEdit(r.id); }
   if (r.name === "player") { ensureLeague(); return renderPlayer(r.id); }
   return renderHome();
@@ -845,6 +847,44 @@ function renderLeagueTable(kind) {
   app.innerHTML = h; wire(); scrollTo(0, y);
 }
 
+// All matches, one block per week (Monday to Sunday). This week is open;
+// older weeks are collapsed until tapped, and stay open across live updates.
+const RECENT_N = 5;
+function weekStart(iso) {
+  const d = new Date((iso || "1970-01-01") + "T12:00:00"), back = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - back);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function weekLabel(ws, thisWs) {
+  if (ws === thisWs) return "This week";
+  if (ws === weekStart(new Date(new Date(thisWs + "T12:00:00").getTime() - 7 * 864e5).toISOString().slice(0, 10))) return "Last week";
+  const a = new Date(ws + "T12:00:00"), b = new Date(a.getTime() + 6 * 864e5);
+  const f = x => `${x.getDate()} ${MONTHS[x.getMonth()]}`;
+  return a.getMonth() === b.getMonth() ? `${a.getDate()}–${f(b)}` : `${f(a)} – ${f(b)}`;
+}
+function renderLeagueMatches() {
+  document.title = `Matches · League · ${SITE}`;
+  const add = canScore() ? `<a class="icon-btn" href="#/league/add" aria-label="Add a match" title="Add a match"><span class="ms">add</span></a>` : "";
+  const top = sub => header("Matches", sub, { back: "#/league", refresh: true, extra: add });
+  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top("") + `<div class="loading">Loading…</div>`; return; }
+  if (S.leagueError) { app.innerHTML = top("") + `<main>${leagueGateMsg()}</main>`; wire(); return; }
+  const st = leagueStats(), n = st.matches.length, thisWs = weekStart(todayISO());
+  const weeks = [];
+  st.matches.slice().reverse().forEach(m => { const ws = weekStart(m.date), last = weeks[weeks.length - 1]; if (last && last.ws === ws) last.list.unshift(m); else weeks.push({ ws, list: [m] }); });
+  let h = top(`League · ${n} match${n === 1 ? "" : "es"}`) + `<main>`;
+  if (st.matches.some(m => m.sample)) h += `<div class="msg sample"><span class="ms" aria-hidden="true">science</span><span><b>Sample data.</b> These matches are made up to show how the league works.</span></div>`;
+  if (!weeks.length || weeks[0].ws !== thisWs) h += `<section class="week-now"><div class="sec-h"><h2>This week</h2></div><div class="empty">No matches yet this week.</div></section>`;
+  weeks.forEach(wk => {
+    const label = weekLabel(wk.ws, thisWs), count = `${wk.list.length} match${wk.list.length === 1 ? "" : "es"}`;
+    if (wk.ws === thisWs) h += `<section class="week-now"><div class="sec-h"><h2>${label}</h2><span>${count}</span></div>${leagueMatchBlocks(wk.list, canScore())}</section>`;
+    else h += `<details class="week" data-w="${wk.ws}"${S.openWeeks.has(wk.ws) ? " open" : ""}><summary><span class="wk-t">${label}</span><span class="wk-n">${count}</span><span class="ms" aria-hidden="true">expand_more</span></summary><div class="week-body">${leagueMatchBlocks(wk.list, canScore())}</div></details>`;
+  });
+  h += `${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
+  const y = scrollY;
+  app.innerHTML = h; wire(); scrollTo(0, y);
+  app.querySelectorAll("details.week").forEach(d => d.addEventListener("toggle", () => { d.open ? S.openWeeks.add(d.dataset.w) : S.openWeeks.delete(d.dataset.w); }));
+}
+
 function renderLeague() {
   document.title = `League · ${SITE}`;
   const add = canScore() ? `<a class="icon-btn" href="#/league/add" aria-label="Add a match" title="Add a match"><span class="ms">add</span></a>` : "";
@@ -868,12 +908,11 @@ function renderLeague() {
   else h += pairsTable(st.pairRows, TOP_N) + moreLink("#/league/pairs", st.pairRows.length, "pairs");
   h += `</section>`;
 
-  h += `<section id="matches"><div class="sec-h"><h2>Matches</h2><span>Latest first</span></div>`;
+  h += `<section id="matches"><div class="sec-h"><h2>Matches</h2><span>${n > RECENT_N ? `Last ${RECENT_N}` : "Latest first"}</span></div>`;
   if (!n) h += `<div class="empty">Results appear here as they're added.</div>`;
   else {
-    const shown = st.matches.slice(-S.leagueShow);
-    h += leagueMatchBlocks(shown, canScore());
-    if (shown.length < n) h += `<button class="btn tonal" id="more" style="align-self:center">Show older matches</button>`;
+    h += leagueMatchBlocks(st.matches.slice(-RECENT_N), canScore());
+    if (n > RECENT_N) h += `<a class="more-link" href="#/league/matches">See all matches · ${n}<span class="ms" aria-hidden="true">chevron_right</span></a>`;
   }
   h += `</section>${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
   const tabs = [["players", "person", "Players"], ["pairs", "group", "Pairs"], ["matches", "sports_tennis", "Matches"]];
@@ -881,7 +920,6 @@ function renderLeague() {
   const y = scrollY;
   app.innerHTML = h; wire(); scrollTo(0, y);
   wireSectionNav(tabs);
-  const more = document.getElementById("more"); if (more) more.onclick = () => { S.leagueShow += 30; renderLeague(); };
 }
 
 // ----- Player profile -----
