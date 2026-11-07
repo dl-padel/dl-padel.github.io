@@ -184,8 +184,6 @@ tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color
 .stats.two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}
 .stat b .plink{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stat b{min-width:0}
-.stat .sub{font-size:12px;line-height:16px;color:var(--on-surface-var);opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stat.hot .sub{color:var(--on-ball);opacity:.8}
 /* Profile hero: big name, form, rank */
 .p-hero{padding:16px 4px 0}
 .p-hero h2{margin:0;font-size:36px;font-weight:700;line-height:42px;display:flex;align-items:center;gap:6px}

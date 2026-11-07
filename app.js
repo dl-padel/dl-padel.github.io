@@ -953,8 +953,8 @@ function renderPlayer(id) {
   let h = top + `<main>`;
   if (S.leagueError) h += leagueGateMsg();
   const st = leagueStats(), r = st.players[id];
-  // Stat box: small icon top left, the stat large at the bottom, its label under it and an optional detail line.
-  const tile = (label, value, icon, hot, sub) => `<div class="stat${hot ? " hot" : ""}"><span class="ms" aria-hidden="true">${icon}</span><b class="num">${value}</b><small>${label}</small>${sub ? `<span class="sub">${sub}</span>` : ""}</div>`;
+  // Stat box: small icon top left, the stat large at the bottom, its label under it.
+  const tile = (label, value, icon, hot) => `<div class="stat${hot ? " hot" : ""}"><span class="ms" aria-hidden="true">${icon}</span><b class="num">${value}</b><small>${label}</small></div>`;
 
   // Hero: big name (with a flame when on fire), form underneath, then the rank.
   const ranked = r && r.P >= LEAGUE_MIN;
@@ -968,14 +968,13 @@ function renderPlayer(id) {
     const partners = Object.entries(r.partners).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || pname(a).localeCompare(pname(b)));
     const opps = Object.entries(r.opps).sort(([a, x], [b, y]) => y.P - x.P || y.L - x.L || pname(a).localeCompare(pname(b)));
     const courts = Object.entries(r.courts).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || a - b);
-    const nm = n => `${n} match${n === 1 ? "" : "es"}`;
     h += `<div class="stats two">`;
-    if (partners[0]) { const [pid, x] = partners[0]; h += tile("Favourite partner", plink(pid), "handshake", false, `${nm(x.P)} together, ${x.W} won`); }
-    if (opps[0]) { const [pid, x] = opps[0]; h += tile("Biggest rival", plink(pid), "swords", false, `Played ${x.P}, won ${x.W}`); }
+    if (partners[0]) { const [pid, x] = partners[0]; h += tile("Favourite partner", plink(pid), "handshake"); }
+    if (opps[0]) { const [pid, x] = opps[0]; h += tile("Biggest rival", plink(pid), "swords"); }
     h += tile("Bagels served", r.bagS, "bakery_dining");
     h += tile("Bagels eaten", r.bagE, "bakery_dining");
     h += tile("Best win streak", r.best, "trending_up");
-    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", `Court ${esc(ct)}`, "location_on", false, `${nm(x.P)}, ${x.W} won`); }
+    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", `Court ${esc(ct)}`, "location_on"); }
     h += `</div>`;
     h += `</section><section><div class="sec-h"><h2>Partners</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">With</th><th>P</th><th>W</th><th>Win%</th></tr></thead><tbody>`
       + partners.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${pctText(x)}</td></tr>`).join("")
