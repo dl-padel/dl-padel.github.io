@@ -29,6 +29,7 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 - 🔥 (`local_fire_department`, orange `#ff8a3d`) after a player or pair on `FIRE_STREAK` = 3+ wins in a row. League only; the comps table still has no badges.
 - Player profile `#/p/{id}` (tap any league name): played/won/win %, current and best streak, form, sets, games, bagels served/eaten, favourite partner (most matches together), biggest rival (most played against), partner and opponent tables, last 10 matches, competition played/won.
 - Match entry `#/league/add`, edit `#/league/m/{id}` (scorers and admins; + in the league header, edit icon on each match, "Scorers' entrance" footer link). Validates set scores (6-0..6-4, 7-5, 7-6), optional tiebreak for 7-6, 2 sets to win, no 3rd set after 2-0.
+- Sample data: `#/admin` → League sample data → Load (about 25 made-up matches over the last 5 weeks, everyone 5–10 matches, 3 regular pairs, seeds retried until there's a 🔥, bagels and tiebreaks). Docs carry `sample: true`; the league page shows a "Sample data" banner while any exist; Remove deletes only those.
 - Future ideas Piers mentioned: planned fixtures / formal league with only league games counting, more stats.
 
 ## UI decisions (agreed with Piers, keep these)

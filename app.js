@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, getDoc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -472,9 +472,26 @@ function renderAdmin() {
   else h += `<div class="alist">` + (S.scorers.map(e => `<div class="arow"><span class="t">${esc(e)}</span><button class="icon-btn" data-rm="${esc(e)}" aria-label="Remove ${esc(e)}" title="Remove"><span class="ms">delete</span></button></div>`).join("") || `<p class="hint">No scorers yet.</p>`) + `</div>`;
   h += `</div></section>`;
 
+  ensureLeague();
+  const nSample = sampleIds().length, nPlayers = Object.keys(S.players).length;
+  h += `<section><div class="sec-h"><h2>League sample data</h2></div><div class="card">`;
+  if (!S.leagueReady) h += `<p class="hint">Loading…</p>`;
+  else if (S.leagueError) h += `<p class="hint">Couldn't load the league (${esc(S.leagueError.code || "error")}).</p>`;
+  else if (nSample) h += `<p class="hint">${nSample} made-up matches are in the league, with a banner saying so. Remove them before real matches start. Real matches aren't touched.</p><button class="btn danger" id="rmsample" style="align-self:flex-start"><span class="ms">delete</span>Remove sample data</button>`;
+  else if (nPlayers < 8) h += `<p class="hint">Add at least 8 players to make sample data.</p>`;
+  else h += `<p class="hint">Fills the league with about 25 made-up matches from the last five weeks, using everyone in the player list, so people can see how the tables, matches and profiles work. Everyone viewing the site sees them. You can remove them all with one tap.</p><button class="btn tonal" id="addsample" style="align-self:flex-start"><span class="ms">science</span>Load sample data</button>`;
+  h += `</div></section>`;
+
   h += `<section><div class="card"><button class="btn tonal" id="signout" style="align-self:flex-start"><span class="ms">logout</span>Sign out</button></div></section></main>`;
   app.innerHTML = h; wire(); wireGate();
 
+  const sampleBtn = (el, fn, ok) => { if (el) el.onclick = async () => {
+    el.disabled = true;
+    try { const n = await fn(); S.notice = { t: ok(n) }; } catch (err) { S.notice = { err: true, t: `Couldn't do that (${err.code || err.message}).` }; }
+    render(); scrollTo(0, 0);
+  }; };
+  sampleBtn(document.getElementById("addsample"), loadSampleLeague, n => `Added ${n} sample matches. Have a look at the league.`);
+  sampleBtn(document.getElementById("rmsample"), removeSampleLeague, n => `Removed ${n} sample matches.`);
   document.getElementById("adds").onsubmit = async e => {
     e.preventDefault();
     const email = document.getElementById("news").value.trim().toLowerCase();
@@ -796,6 +813,7 @@ function renderLeague() {
   const st = leagueStats(), n = st.matches.length;
   let h = top(n ? `${n} match${n === 1 ? "" : "es"} · ${st.playerRows.length} players` : "") + `<main class="has-nav">`;
   if (S.notice) h += `<div class="msg${S.notice.err ? " err" : ""}">${esc(S.notice.t)}</div>`;
+  if (st.matches.some(m => m.sample)) h += `<div class="msg sample"><span class="ms" aria-hidden="true">science</span><span><b>Sample data.</b> These matches are made up to show how the league works. Real results start soon.</span></div>`;
 
   // Players: ranked by win %, once they've played enough to count.
   h += `<section id="players"><div class="sec-h"><h2>Players</h2><span>By win %</span></div>`;
@@ -1031,6 +1049,88 @@ async function saveLeagueMatch(id) {
   } catch (e) {
     S.saving = false; fail(`Couldn't save (${e.code || e.message}). Check your connection and try again.`);
   }
+}
+
+
+// ----- Sample league data (admin only) -----
+// Made-up matches to show people how the league looks. Every one is tagged
+// sample: true so "Remove sample data" deletes exactly these and nothing else.
+function sampleRng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function makeSampleLeague(ids, seed) {
+  const rnd = sampleRng(seed), pick = a => a[Math.floor(rnd() * a.length)];
+  const order = ids.slice().sort(() => rnd() - .5);
+  const skill = {}, target = {}, played = {}, mate = {};
+  order.forEach(id => { skill[id] = .3 + rnd() * .6; target[id] = 5 + Math.floor(rnd() * 6); played[id] = 0; });
+  // Three regular pairs who usually play together; everyone else mixes.
+  for (let i = 0; i + 1 < Math.min(6, order.length); i += 2) { mate[order[i]] = order[i + 1]; mate[order[i + 1]] = order[i]; }
+  const need = id => target[id] - played[id];
+  const free = (taken, cap) => ids.filter(id => !taken.includes(id) && played[id] < cap);
+  const best = list => list.sort((x, y) => need(y) - need(x) || rnd() - .5)[0];
+  const pairFor = taken => {
+    const p = best(free(taken, 10).filter(id => need(id) > 0)) || best(free(taken, 10)); if (!p) return null;
+    const m = mate[p];
+    if (m && !taken.includes(m) && played[m] < 10 && rnd() < .8) return [p, m];
+    const others = free([...taken, p], 10).filter(id => id !== m);
+    return others.length ? [p, best(others)] : null;
+  };
+  // A set score: the loser's games, weighted towards close sets, with some bagels and tiebreaks.
+  const loserGames = () => { const r = rnd(); return r < .09 ? 0 : r < .19 ? 1 : r < .34 ? 2 : r < .54 ? 3 : r < .74 ? 4 : r < .87 ? 5 : 6; };
+  const matches = [];
+  for (let guard = 0; guard < 200 && ids.some(id => need(id) > 0); guard++) {
+    const A = pairFor([]); if (!A) break;
+    const B = pairFor(A); if (!B) break;
+    [...A, ...B].forEach(id => played[id]++);
+    const sa = (skill[A[0]] + skill[A[1]]) / 2, sb = (skill[B[0]] + skill[B[1]]) / 2;
+    const pA = 1 / (1 + Math.exp(-(sa - sb) * 6));
+    const sets = []; let wa = 0, wb = 0;
+    while (wa < 2 && wb < 2) {
+      const aWins = rnd() < pA, l = loserGames(), w = l >= 5 ? 7 : 6;
+      let ta = null, tb = null;
+      if (l === 6) { const lp = rnd() < .8 ? Math.floor(rnd() * 6) : 6 + Math.floor(rnd() * 3); const wp = Math.max(7, lp + 2); [ta, tb] = aWins ? [wp, lp] : [lp, wp]; }
+      sets.push(aWins ? { a: w, b: l, ta, tb } : { a: l, b: w, ta, tb }); aWins ? wa++ : wb++;
+    }
+    matches.push({ a: A, b: B, sets });
+  }
+  // Spread over the last five weeks, 3-5 match days a week, oldest first.
+  const days = [];
+  for (let wk = 4; wk >= 0; wk--) {
+    const n = 3 + Math.floor(rnd() * 3), opts = [0, 1, 2, 3, 4, 5, 6].sort(() => rnd() - .5).slice(0, n).sort((x, y) => y - x);
+    opts.forEach(o => { const back = wk * 7 + o + 1; days.push(back); });
+  }
+  const iso = back => { const d = new Date(); d.setDate(d.getDate() - back); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const base = Date.now() - 40 * 864e5;
+  return matches.map((m, i) => ({ ...m, date: iso(days[Math.floor(i * days.length / matches.length)]), createdAt: base + i * 1000, sample: true }));
+}
+// Try seeds until the data shows everything off: everyone on 5-10 matches,
+// a fire streak, a few bagels and tiebreaks.
+function goodSampleLeague(ids) {
+  const saved = S.league;
+  try {
+    for (let seed = 1; seed < 500; seed++) {
+      const list = makeSampleLeague(ids, seed);
+      S.league = Object.fromEntries(list.map((m, i) => ["s" + i, m]));
+      const st = leagueStats(), rows = Object.values(st.players);
+      const sets = list.flatMap(m => m.sets);
+      if (rows.length === ids.length && rows.every(r => r.P >= 5 && r.P <= 10) && rows.some(r => r.cur >= FIRE_STREAK)
+        && st.pairRows.some(r => r.P >= 4) && sets.filter(x => x.ta != null).length >= 3 && sets.filter(x => Math.min(x.a, x.b) === 0).length >= 3) return list;
+    }
+    return null;
+  } finally { S.league = saved; }
+}
+const sampleIds = () => Object.entries(S.league).filter(([, m]) => m.sample).map(([id]) => id);
+async function loadSampleLeague() {
+  const list = goodSampleLeague(Object.keys(S.players));
+  if (!list) throw new Error("couldn't build sample data");
+  const b = writeBatch(db);
+  list.forEach(m => b.set(doc(collection(db, "league")), { ...m, updatedBy: S.user.email }));
+  await b.commit();
+  return list.length;
+}
+async function removeSampleLeague() {
+  const ids = sampleIds(), b = writeBatch(db);
+  ids.forEach(id => b.delete(doc(db, "league", id)));
+  await b.commit();
+  return ids.length;
 }
 
 render();
