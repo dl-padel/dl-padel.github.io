@@ -195,6 +195,7 @@ function route() {
   const p = h.split("/").map(decodeURIComponent);
   if (p[0] === "c" && p[1]) return { name: "comp", id: p[1] };
   if (p[0] === "comps") return { name: "comps" };
+  if (p[0] === "league" && (p[1] === "players" || p[1] === "pairs")) return { name: "leagueTable", kind: p[1] };
   if (p[0] === "league" && p[1] === "add") return { name: "leagueEdit", id: "new" };
   if (p[0] === "league" && p[1] === "m" && p[2]) return { name: "leagueEdit", id: p[2] };
   if (p[0] === "league") return { name: "league" };
@@ -227,6 +228,7 @@ function render() {
   if (r.name === "admin") return renderAdmin();
   if (r.name === "editComp") return renderEditComp(r.id);
   if (r.name === "league") { ensureLeague(); return renderLeague(); }
+  if (r.name === "leagueTable") { ensureLeague(); return renderLeagueTable(r.kind); }
   if (r.name === "leagueEdit") { ensureLeague(); return renderLeagueEdit(r.id); }
   if (r.name === "player") { ensureLeague(); return renderPlayer(r.id); }
   return renderHome();
@@ -804,6 +806,41 @@ function leagueGateMsg() {
   return `<div class="msg err">Couldn't load the league (${esc(e.code || e.message)}). If it's new, the Firestore security rules need publishing.</div>`;
 }
 
+// The league page shows the top of each table; the full tables have their own pages.
+const TOP_N = 10;
+function playersTable(rows, limit = Infinity) {
+  let h = `<div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th></th><th class="l">Player</th><th>P</th><th>W</th><th>L</th><th>Win%</th><th class="l">Form</th></tr></thead><tbody>`;
+  let shownSep = false;
+  rows.slice(0, limit).forEach((r, i) => {
+    const ok = r.P >= LEAGUE_MIN;
+    if (!ok && !shownSep) { shownSep = true; h += `<tr class="sep"><td colspan="7">Fewer than ${LEAGUE_MIN} matches · not ranked yet</td></tr>`; }
+    h += `<tr${ok && i === 0 ? ' class="lead"' : ""}><td class="pos num">${ok ? i + 1 : ""}</td><td class="team l">${plink(r.id)}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td><td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
+  });
+  return h + `</tbody></table></div></div>`;
+}
+function pairsTable(rows, limit = Infinity) {
+  let h = `<div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th></th><th class="l">Pair</th><th>P</th><th>W</th><th>L</th><th>Win%</th><th class="l">Form</th></tr></thead><tbody>`;
+  rows.slice(0, limit).forEach((r, i) => {
+    h += `<tr${i === 0 ? ' class="lead"' : ""}><td class="pos num">${i + 1}</td><td class="team l">${plink(r.ids[0])} &amp; ${plink(r.ids[1])}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td><td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
+  });
+  return h + `</tbody></table></div></div>`;
+}
+const moreLink = (href, total, what) => total > TOP_N ? `<a class="more-link" href="${href}">See full table · ${total} ${what}<span class="ms" aria-hidden="true">chevron_right</span></a>` : "";
+function renderLeagueTable(kind) {
+  const isP = kind === "players", title = isP ? "Players" : "Pairs";
+  document.title = `${title} · League · ${SITE}`;
+  const top = sub => header(title, sub, { back: "#/league", refresh: true });
+  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top("") + `<div class="loading">Loading…</div>`; return; }
+  if (S.leagueError) { app.innerHTML = top("") + `<main>${leagueGateMsg()}</main>`; wire(); return; }
+  const st = leagueStats(), rows = isP ? st.playerRows : st.pairRows;
+  let h = top(`League · ${rows.length} ${kind} · ${isP ? "by win %" : "by wins"}`) + `<main>`;
+  if (st.matches.some(m => m.sample)) h += `<div class="msg sample"><span class="ms" aria-hidden="true">science</span><span><b>Sample data.</b> These matches are made up to show how the league works.</span></div>`;
+  h += `<section>${rows.length ? (isP ? playersTable(rows) : pairsTable(rows)) : `<div class="empty">No matches yet.</div>`}</section>`;
+  h += `${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
+  const y = scrollY;
+  app.innerHTML = h; wire(); scrollTo(0, y);
+}
+
 function renderLeague() {
   document.title = `League · ${SITE}`;
   const add = canScore() ? `<a class="icon-btn" href="#/league/add" aria-label="Add a match" title="Add a match"><span class="ms">add</span></a>` : "";
@@ -818,28 +855,13 @@ function renderLeague() {
   // Players: ranked by win %, once they've played enough to count.
   h += `<section id="players"><div class="sec-h"><h2>Players</h2><span>By win %</span></div>`;
   if (!n) h += `<div class="empty">No matches yet. ${canScore() ? `Tap <b>+</b> to add the first one.` : "The table fills in as matches are added."}</div>`;
-  else {
-    h += `<div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th></th><th class="l">Player</th><th>P</th><th>W</th><th>L</th><th>Win%</th><th class="l">Form</th></tr></thead><tbody>`;
-    let shownSep = false;
-    st.playerRows.forEach((r, i) => {
-      const ok = r.P >= LEAGUE_MIN;
-      if (!ok && !shownSep) { shownSep = true; h += `<tr class="sep"><td colspan="7">Fewer than ${LEAGUE_MIN} matches · not ranked yet</td></tr>`; }
-      h += `<tr${ok && i === 0 ? ' class="lead"' : ""}><td class="pos num">${ok ? i + 1 : ""}</td><td class="team l">${plink(r.id)}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td><td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
-    });
-    h += `</tbody></table></div></div>`;
-  }
+  else h += playersTable(st.playerRows, TOP_N) + moreLink("#/league/players", st.playerRows.length, "players");
   h += `</section>`;
 
   // Pairs: ranked by total wins.
   h += `<section id="pairs"><div class="sec-h"><h2>Pairs</h2><span>By wins</span></div>`;
   if (!n) h += `<div class="empty">Pairs appear here once they've played.</div>`;
-  else {
-    h += `<div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th></th><th class="l">Pair</th><th>P</th><th>W</th><th>L</th><th>Win%</th><th class="l">Form</th></tr></thead><tbody>`;
-    st.pairRows.forEach((r, i) => {
-      h += `<tr${i === 0 ? ' class="lead"' : ""}><td class="pos num">${i + 1}</td><td class="team l">${plink(r.ids[0])} &amp; ${plink(r.ids[1])}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td><td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
-    });
-    h += `</tbody></table></div></div>`;
-  }
+  else h += pairsTable(st.pairRows, TOP_N) + moreLink("#/league/pairs", st.pairRows.length, "pairs");
   h += `</section>`;
 
   h += `<section id="matches"><div class="sec-h"><h2>Matches</h2><span>Latest first</span></div>`;

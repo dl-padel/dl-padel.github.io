@@ -227,3 +227,6 @@ table.lt td.pos{padding-left:12px;width:24px}
 table.lt .form{gap:4px;padding-right:12px}
 .msg.sample{display:flex;gap:10px;align-items:flex-start;background:var(--secondary-container);color:var(--on-secondary-container)}
 .msg.sample .ms{font-size:20px;width:20px;flex:none}
+.more-link{display:flex;align-items:center;justify-content:center;gap:2px;margin-top:8px;min-height:44px;border-radius:12px;color:var(--primary);font-size:14px;font-weight:500;text-decoration:none}
+.more-link:hover{background:var(--surface-1)}
+.more-link .ms{font-size:20px;width:20px}
