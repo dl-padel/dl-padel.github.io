@@ -113,7 +113,8 @@ function fmtDate(d, long) {
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
 function fmtTime12(t) {
-  const [h, m] = (t || "").split(":").map(Number);
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
   if (isNaN(h)) return "";
   const suf = h < 12 ? "am" : "pm", h12 = h % 12 || 12;
   return m ? `${h12}:${String(m).padStart(2, "0")}${suf}` : `${h12}${suf}`;
@@ -355,17 +356,24 @@ function defendingTeamIds(c, selfId) {
 }
 const crown = t => DEFENDING.has(t.id) ? '<span class="ms crown" role="img" aria-label="Defending champions" title="Defending champions">crown</span>' : "";
 
-// A match is two table rows: court (spanning both), then each team with its score.
-function matchRows(c, m) {
-  const A = teamById(c, m.a), B = teamById(c, m.b), done = played(m), sa = +m.sa, sb = +m.sb;
-  const row = (t, sc, o, first) => {
-    const cls = [first ? "m1" : "m2", !done ? "" : sc > o ? "won" : sc < o ? "lost" : ""].filter(Boolean).join(" ");
-    return `<tr class="${cls}">${first ? `<td class="fx-court" rowspan="2"><small>Court</small><b class="num">${m.court}</b></td>` : ""}<td class="l fx-team"><span class="nm">${esc(teamName(t))}${crown(t)}</span></td><td class="fx-sc num">${done ? sc : ""}</td></tr>`;
-  };
-  return row(A, sa, sb, true) + row(B, sb, sa, false);
+// A match card: header (when, plus an Edit link for admins), the two sides
+// with their scores and a trophy for the winner, then a footer with the court.
+function matchCard({ when, edit, rows, cols, court }) {
+  return `<div class="mcard"><div class="mc-h"><span class="mc-when">${esc(when)}</span>${edit ? `<a class="mc-edit" href="${edit}">Edit</a>` : ""}</div>`
+    + `<table class="mc-t"><colgroup><col><col class="c-w">${cols}</colgroup><tbody>${rows}</tbody></table>`
+    + (court ? `<div class="mc-f"><span class="ms" aria-hidden="true">location_on</span>Court ${esc(court)}</div>` : "") + `</div>`;
 }
-function roundBlock(c, r, list, isNext) {
-  return `<div class="round${isNext ? " next" : ""}"><div class="round-h">${isNext ? '<span class="chip upcoming">Up next</span>' : ""}<b>Round ${r}</b><span>·</span><span class="num">${roundTime(c, r)}</span></div><div class="card"><table class="fx"><colgroup><col class="c-court"><col><col class="c-sc"></colgroup><tbody>${list.map(m => matchRows(c, m)).join("")}</tbody></table></div></div>`;
+const trophyCell = won => `<td class="mc-w">${won ? '<span class="ms" role="img" aria-label="Winners" title="Winners">trophy</span>' : ""}</td>`;
+function compMatchCard(c, id, m, r) {
+  const A = teamById(c, m.a), B = teamById(c, m.b), done = played(m), sa = +m.sa, sb = +m.sb;
+  const row = (t, sc, o) => {
+    const res = !done ? "" : sc > o ? "won" : sc < o ? "lost" : "";
+    return `<tr class="${res}"><td class="l mc-nm"><span class="nm">${esc(teamName(t))}${crown(t)}</span></td>${trophyCell(res === "won")}<td class="mc-sc num${res === "won" ? " sw" : ""}">${done ? sc : ""}</td></tr>`;
+  };
+  return matchCard({ when: fmtTime12(roundTime(c, r)), edit: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : "", rows: row(A, sa, sb) + row(B, sb, sa), cols: '<col class="c-sc">', court: m.court });
+}
+function roundBlock(c, id, r, list, isNext) {
+  return `<div class="round${isNext ? " next" : ""}"><div class="round-h">${isNext ? '<span class="chip upcoming">Up next</span>' : ""}<b>Round ${r}</b><span>·</span><span class="num">${roundTime(c, r)}</span></div><div class="mcards">${list.map(m => compMatchCard(c, id, m, r)).join("")}</div></div>`;
 }
 function renderComp(id) {
   if (!S.compsReady || !S.playersReady) { app.innerHTML = header(SITE, "", { back: "#/comps" }) + `<div class="loading">Loading…</div>`; return; }
@@ -391,13 +399,13 @@ function renderComp(id) {
 
   h += `<section id="fixtures"><div class="sec-h"><h2>Fixtures</h2><span>${nextR ? `Round ${nextR} of ${R} next` : "Games still to play"}</span></div>`;
   let any = false;
-  for (let r = 1; r <= R; r++) { const l = (byRound[r] || []).filter(m => !played(m)); if (l.length) { any = true; h += roundBlock(c, r, l, r === nextR); } }
+  for (let r = 1; r <= R; r++) { const l = (byRound[r] || []).filter(m => !played(m)); if (l.length) { any = true; h += roundBlock(c, id, r, l, r === nextR); } }
   if (!any) h += `<div class="empty">All games played. Check the table for the final standings.</div>`;
   h += `</section>`;
 
   h += `<section id="results"><div class="sec-h"><h2>Results</h2><span>Latest first</span></div>`;
   any = false;
-  for (let r = R; r >= 1; r--) { const l = (byRound[r] || []).filter(played); if (l.length) { any = true; h += roundBlock(c, r, l); } }
+  for (let r = R; r >= 1; r--) { const l = (byRound[r] || []).filter(played); if (l.length) { any = true; h += roundBlock(c, id, r, l); } }
   if (!any) h += `<div class="empty">No scores yet. Results appear here as soon as they are entered.</div>`;
 
   h += `</section>${footer()}</main>`;
@@ -728,7 +736,7 @@ const msOf = t => (t && typeof t.toMillis === "function") ? t.toMillis() : (type
 function leagueMatches() {
   return Object.entries(S.league).map(([id, m]) => ({ id, ...m }))
     .filter(m => Array.isArray(m.a) && Array.isArray(m.b) && Array.isArray(m.sets))
-    .sort((x, y) => (x.date || "").localeCompare(y.date || "") || msOf(x.createdAt) - msOf(y.createdAt));
+    .sort((x, y) => (x.date || "").localeCompare(y.date || "") || (x.time || "").localeCompare(y.time || "") || msOf(x.createdAt) - msOf(y.createdAt));
 }
 // Sets and games for each side, and who won.
 function matchScore(m) {
@@ -748,7 +756,7 @@ function addResult(r, won, s, side) {
 // Everything the league pages show, worked out from the full match list.
 function leagueStats() {
   const players = {}, pairs = {}, matches = leagueMatches();
-  const P = id => players[id] ||= blankRow({ id, partners: {}, opps: {} });
+  const P = id => players[id] ||= blankRow({ id, partners: {}, opps: {}, courts: {} });
   matches.forEach(m => {
     const s = matchScore(m);
     [["a", m.a, m.b], ["b", m.b, m.a]].forEach(([side, mine, theirs]) => {
@@ -760,6 +768,7 @@ function leagueStats() {
         const mate = mine[1 - i], pt = r.partners[mate] ||= { P: 0, W: 0 };
         pt.P++; if (won) pt.W++;
         theirs.forEach(o => { const op = r.opps[o] ||= { P: 0, W: 0, L: 0 }; op.P++; won ? op.W++ : op.L++; });
+        if (m.court) { const ct = r.courts[m.court] ||= { P: 0, W: 0 }; ct.P++; if (won) ct.W++; }
       });
       const key = mine.slice().sort().join("|");
       const pr = pairs[key] ||= blankRow({ ids: mine.slice().sort((x, y) => pname(x).localeCompare(pname(y))) });
@@ -776,11 +785,11 @@ const plink = id => `<a class="plink" href="#/p/${encodeURIComponent(id)}">${esc
 const fire = r => r.cur >= FIRE_STREAK ? `<span class="ms fire" role="img" aria-label="${r.cur} wins in a row" title="${r.cur} wins in a row">local_fire_department</span>` : "";
 const formDots = form => form.length ? form.slice(-5).map(f => { const lab = f === "W" ? "Win" : "Loss"; return `<span class="fchip f${f}" role="img" aria-label="${lab}" title="${lab}"></span>`; }).join("") : `<span class="fnone">–</span>`;
 
-// Two table rows per match: each pair with its set scores. Tiebreak points
-// sit small next to each team's set score (7⁷ over 6⁵); a bagel gets a 🥯.
-function leagueMatchRows(m, editable) {
-  const s = matchScore(m), n = m.sets.length;
-  const row = (side, ids, first) => {
+// League match card: up to 3 set columns. Tiebreak points sit small next to
+// each team's set score (7⁷ over 6⁵); a bagel gets a 🥯.
+function leagueMatchCard(m, editable) {
+  const s = matchScore(m);
+  const row = (side, ids) => {
     const won = side === "a" ? s.aWon : !s.aWon;
     const cells = [0, 1, 2].map(i => {
       const st = m.sets[i]; if (!st) return `<td class="set"></td>`;
@@ -789,19 +798,17 @@ function leagueMatchRows(m, editable) {
       const bagel = isBagel(mine, theirs) ? `<sup class="bagel" title="Bagel">🥯</sup>` : "";
       return `<td class="set num${wonSet ? " sw" : ""}">${mine}${tb}${bagel}</td>`;
     }).join("");
-    const edit = editable && first ? `<td class="ed" rowspan="2"><a class="icon-btn" href="#/league/m/${encodeURIComponent(m.id)}" aria-label="Edit match"><span class="ms">edit</span></a></td>` : "";
-    return `<tr class="${first ? "m1" : "m2"} ${won ? "won" : "lost"}"><td class="l fx-team"><span class="nm">${plink(ids[0])} &amp; ${plink(ids[1])}</span></td>${cells}${edit}</tr>`;
+    return `<tr class="${won ? "won" : "lost"}"><td class="l mc-nm"><span class="nm">${plink(ids[0])} &amp; ${plink(ids[1])}</span></td>${trophyCell(won)}${cells}</tr>`;
   };
-  return row("a", m.a, true) + row("b", m.b, false);
+  return matchCard({
+    when: [fmtTime12(m.time), shortDate(m.date) || "No date"].filter(Boolean).join(" · "),
+    edit: editable ? `#/league/m/${encodeURIComponent(m.id)}` : "",
+    rows: row("a", m.a) + row("b", m.b), cols: '<col class="c-set">'.repeat(3), court: m.court,
+  });
 }
-function leagueMatchTable(list, editable) {
-  return `<div class="card"><table class="fx lg"><colgroup><col>${"<col class=\"c-set\">".repeat(3)}${editable ? '<col class="c-ed">' : ""}</colgroup><tbody>${list.map(m => leagueMatchRows(m, editable)).join("")}</tbody></table></div>`;
-}
-// Newest first, one block per day.
+// Newest first.
 function leagueMatchBlocks(list, editable) {
-  const byDate = [];
-  list.slice().reverse().forEach(m => { const last = byDate[byDate.length - 1]; if (last && last.date === m.date) last.list.push(m); else byDate.push({ date: m.date, list: [m] }); });
-  return byDate.map(g => `<div class="round"><div class="round-h"><b>${esc(shortDate(g.date) || "No date")}</b><span>·</span><span>${g.list.length} match${g.list.length === 1 ? "" : "es"}</span></div>${leagueMatchTable(g.list, editable)}</div>`).join("");
+  return `<div class="mcards">${list.slice().reverse().map(m => leagueMatchCard(m, editable)).join("")}</div>`;
 }
 function leagueGateMsg() {
   const e = S.leagueError;
@@ -946,10 +953,12 @@ function renderPlayer(id) {
     // Partner and rival highlights
     const partners = Object.entries(r.partners).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || pname(a).localeCompare(pname(b)));
     const opps = Object.entries(r.opps).sort(([a, x], [b, y]) => y.P - x.P || y.L - x.L || pname(a).localeCompare(pname(b)));
-    const hl = (label, icon, pid, text) => `<div class="hl"><span class="ms" aria-hidden="true">${icon}</span><div><small>${label}</small><b>${plink(pid)}</b><span>${text}</span></div></div>`;
+    const hl = (label, icon, name, text) => `<div class="hl"><span class="ms" aria-hidden="true">${icon}</span><div><small>${label}</small><b>${name}</b><span>${text}</span></div></div>`;
+    const courts = Object.entries(r.courts).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || a - b);
     h += `<div class="hls">`;
-    if (partners[0]) { const [pid, x] = partners[0]; h += hl("Favourite partner", "handshake", pid, `${x.P} match${x.P === 1 ? "" : "es"} together, ${x.W} won`); }
-    if (opps[0]) { const [pid, x] = opps[0]; h += hl("Biggest rival", "swords", pid, `Played ${x.P}, won ${x.W}, lost ${x.L}`); }
+    if (partners[0]) { const [pid, x] = partners[0]; h += hl("Favourite partner", "handshake", plink(pid), `${x.P} match${x.P === 1 ? "" : "es"} together, ${x.W} won`); }
+    if (opps[0]) { const [pid, x] = opps[0]; h += hl("Biggest rival", "swords", plink(pid), `Played ${x.P}, won ${x.W}, lost ${x.L}`); }
+    if (courts[0]) { const [ct, x] = courts[0]; h += hl("Favourite court", "location_on", `Court ${esc(ct)}`, `${x.P} match${x.P === 1 ? "" : "es"} there, ${x.W} won`); }
     h += `</div>`;
     h += `</section><section><div class="sec-h"><h2>Partners</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">With</th><th>P</th><th>W</th><th>Win%</th></tr></thead><tbody>`
       + partners.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${pctText(x)}</td></tr>`).join("")
@@ -1018,10 +1027,10 @@ function renderLeagueEdit(id) {
 
   if (!S.ldraft || S.ldraftId !== id) {
     const blankSet = () => ({ a: null, b: null, ta: null, tb: null });
-    if (isNew) S.ldraft = { date: todayISO(), a: ["", ""], b: ["", ""], sets: [blankSet(), blankSet(), blankSet()] };
+    if (isNew) S.ldraft = { date: todayISO(), time: "", court: "", a: ["", ""], b: ["", ""], sets: [blankSet(), blankSet(), blankSet()] };
     else if (S.league[id]) {
       const m = clone(S.league[id]);
-      S.ldraft = { date: m.date || todayISO(), a: m.a.slice(), b: m.b.slice(), sets: [0, 1, 2].map(i => ({ ...blankSet(), ...(m.sets[i] || {}) })) };
+      S.ldraft = { date: m.date || todayISO(), time: m.time || "", court: m.court ? String(m.court) : "", a: m.a.slice(), b: m.b.slice(), sets: [0, 1, 2].map(i => ({ ...blankSet(), ...(m.sets[i] || {}) })) };
     } else { app.innerHTML = h + `<div class="empty">This match doesn't exist any more. <a href="#/league">Back to the league</a></div></main>`; wire(); return; }
     S.ldraftId = id;
   }
@@ -1029,7 +1038,9 @@ function renderLeagueEdit(id) {
   const pairLabel = side => [pname(d[side][0]), pname(d[side][1])].filter(Boolean).join(" & ") || (side === "a" ? "Pair A" : "Pair B");
 
   h += `<section><div class="sec-h"><h2>Match</h2></div><div class="card">
-    <div class="field"><label for="m-date">Date played</label><input type="date" id="m-date" value="${esc(d.date)}"></div>`;
+    <div class="row"><div class="field"><label for="m-date">Date played</label><input type="date" id="m-date" value="${esc(d.date)}"></div>
+    <div class="field"><label for="m-time">Time (optional)</label><input type="time" id="m-time" value="${esc(d.time)}"></div></div>
+    <div class="field"><label for="m-court">Court (optional)</label><select id="m-court"><option value="">Not recorded</option>${[1, 2, 3, 4, 5, 6].map(n => `<option value="${n}"${String(n) === d.court ? " selected" : ""}>Court ${n}</option>`).join("")}</select></div>`;
   ["a", "b"].forEach(side => {
     h += `<div class="team-ed"><h4>${side === "a" ? "Pair A" : "Pair B"}</h4><div class="row">
       <div class="field"><label for="${side}0">Player 1</label>${playerSelect(side + "0", d[side][0])}</div>
@@ -1065,6 +1076,8 @@ function renderLeagueEdit(id) {
     if (s) s.disabled = false;
   };
   document.getElementById("m-date").oninput = e => { d.date = e.target.value; markDirty(); };
+  document.getElementById("m-time").oninput = e => { d.time = e.target.value; markDirty(); };
+  document.getElementById("m-court").onchange = e => { d.court = e.target.value; markDirty(); };
   ["a", "b"].forEach(side => [0, 1].forEach(i => {
     document.getElementById(side + i).onchange = e => { d[side][i] = e.target.value; markDirty(); renderLeagueEdit(id); };
   }));
@@ -1104,7 +1117,7 @@ async function saveLeagueMatch(id) {
   if (new Set(four).size !== 4) return fail("Someone is picked twice. Each player can only be in the match once.");
   const err = checkSets(d.sets); if (err) return fail(err);
   const sets = d.sets.filter(st => st.a !== null).map(st => ({ a: st.a, b: st.b, ta: st.ta, tb: st.tb }));
-  const data = { date: d.date, a: d.a.slice(), b: d.b.slice(), sets, updatedAt: serverTimestamp(), updatedBy: S.user.email };
+  const data = { date: d.date, time: d.time || null, court: d.court ? +d.court : null, a: d.a.slice(), b: d.b.slice(), sets, updatedAt: serverTimestamp(), updatedBy: S.user.email };
   S.saving = true; renderLeagueEdit(id);
   try {
     if (id === "new") await addDoc(collection(db, "league"), { ...data, createdAt: serverTimestamp() });
@@ -1163,7 +1176,11 @@ function makeSampleLeague(ids, seed) {
   }
   const iso = back => { const d = new Date(); d.setDate(d.getDate() - back); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
   const base = Date.now() - 40 * 864e5;
-  return matches.map((m, i) => ({ ...m, date: iso(days[Math.floor(i * days.length / matches.length)]), createdAt: base + i * 1000, sample: true }));
+  return matches.map((m, i) => {
+    const date = iso(days[Math.floor(i * days.length / matches.length)]), dow = new Date(date + "T12:00:00").getDay();
+    const time = dow === 0 || dow === 6 ? pick(["09:00", "10:00", "10:30", "11:00"]) : pick(["18:30", "19:00", "19:30", "20:00"]);
+    return { ...m, date, time, court: pick([1, 1, 2, 2, 3, 3, 4]), createdAt: base + i * 1000, sample: true };
+  });
 }
 // Try seeds until the data shows everything off: everyone on 5-10 matches,
 // a fire streak, a few bagels and tiebreaks.
