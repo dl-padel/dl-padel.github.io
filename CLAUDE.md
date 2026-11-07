@@ -25,7 +25,7 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 
 ## League (`#/league`)
 - Weekly doubles, partners change. Two tables: **Players** ranked by win % (need `LEAGUE_MIN` = 3 matches to be ranked; others listed under a "not ranked yet" line), then wins, set diff, game diff. **Pairs** ranked by total wins, then win %. Columns: P W L Win% Form.
-- Matches section: newest first, one card per day, rows like comp fixtures with up to 3 set columns. Tiebreak points as superscript on the losing 6; 🥯 superscript on a 0 in a 6-0 set.
+- Matches section: newest first, one card per day, rows like comp fixtures with up to 3 set columns. Tiebreak points as superscript on both teams' set scores (7⁷ over 6⁵), not the tennis loser-only convention; 🥯 superscript on a 0 in a 6-0 set.
 - 🔥 (`local_fire_department`, orange `#ff8a3d`) after a player or pair on `FIRE_STREAK` = 3+ wins in a row. League only; the comps table still has no badges.
 - Player profile `#/p/{id}` (tap any league name): played/won/win %, current and best streak, form, sets, games, bagels served/eaten, favourite partner (most matches together), biggest rival (most played against), partner and opponent tables, last 10 matches, competition played/won.
 - Match entry `#/league/add`, edit `#/league/m/{id}` (scorers and admins; + in the league header, edit icon on each match, "Scorers' entrance" footer link). Validates set scores (6-0..6-4, 7-5, 7-6), optional tiebreak for 7-6, 2 sets to win, no 3rd set after 2-0.

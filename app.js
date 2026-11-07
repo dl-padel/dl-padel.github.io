@@ -773,7 +773,7 @@ const fire = r => r.cur >= FIRE_STREAK ? `<span class="ms fire" role="img" aria-
 const formDots = form => form.length ? form.slice(-5).map(f => { const lab = f === "W" ? "Win" : "Loss"; return `<span class="fchip f${f}" role="img" aria-label="${lab}" title="${lab}"></span>`; }).join("") : `<span class="fnone">–</span>`;
 
 // Two table rows per match: each pair with its set scores. Tiebreak points
-// sit small next to the losing score, tennis style; a bagel gets a 🥯.
+// sit small next to each team's set score (7⁷ over 6⁵); a bagel gets a 🥯.
 function leagueMatchRows(m, editable) {
   const s = matchScore(m), n = m.sets.length;
   const row = (side, ids, first) => {
@@ -781,7 +781,7 @@ function leagueMatchRows(m, editable) {
     const cells = [0, 1, 2].map(i => {
       const st = m.sets[i]; if (!st) return `<td class="set"></td>`;
       const mine = +st[side], theirs = +st[side === "a" ? "b" : "a"], wonSet = mine > theirs;
-      const tb = st.ta != null && st.tb != null && !wonSet ? `<sup>${side === "a" ? st.ta : st.tb}</sup>` : "";
+      const tb = st.ta != null && st.tb != null ? `<sup title="Tiebreak">${side === "a" ? st.ta : st.tb}</sup>` : "";
       const bagel = isBagel(mine, theirs) ? `<sup class="bagel" title="Bagel">🥯</sup>` : "";
       return `<td class="set num${wonSet ? " sw" : ""}">${mine}${tb}${bagel}</td>`;
     }).join("");
