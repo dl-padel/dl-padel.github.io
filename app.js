@@ -356,12 +356,12 @@ function defendingTeamIds(c, selfId) {
 }
 const crown = t => DEFENDING.has(t.id) ? '<span class="ms crown" role="img" aria-label="Defending champions" title="Defending champions">crown</span>' : "";
 
-// A match card: header (time, date for the league, court; plus an Edit link
-// for admins), then the two sides with their scores and a trophy for the winner.
+// A match card: the two sides with their scores and a trophy for the winner,
+// then a footer with time, date (league), court and an Edit link for admins.
 function matchCard({ when, edit, rows, cols, court }) {
   const head = [when, court ? `Court ${court}` : ""].filter(Boolean).join(" · ");
-  return `<div class="mcard"><div class="mc-h"><span class="mc-when">${esc(head)}</span>${edit ? `<a class="mc-edit" href="${edit}">Edit</a>` : ""}</div>`
-    + `<table class="mc-t"><colgroup><col><col class="c-w">${cols}</colgroup><tbody>${rows}</tbody></table></div>`;
+  return `<div class="mcard"><table class="mc-t"><colgroup><col><col class="c-w">${cols}</colgroup><tbody>${rows}</tbody></table>`
+    + `<div class="mc-h"><span class="mc-when">${esc(head)}</span>${edit ? `<a class="mc-edit" href="${edit}">Edit</a>` : ""}</div></div>`;
 }
 const trophyCell = won => `<td class="mc-w">${won ? '<span class="ms" role="img" aria-label="Winners" title="Winners">trophy</span>' : ""}</td>`;
 function compMatchCard(c, id, m, r) {

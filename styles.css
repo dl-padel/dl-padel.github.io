@@ -229,7 +229,7 @@ main > details.week + details.week{margin-top:-18px}
 /* Match cards (league and competitions): header, the two sides, footer */
 .mcards{display:flex;flex-direction:column;gap:10px}
 .mcard{background:var(--surface-1);border-radius:16px;overflow:hidden}
-.mc-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;padding:0 6px 0 16px;border-bottom:1px solid var(--outline-var);font-size:13px;color:var(--on-surface-var)}
+.mc-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;padding:0 6px 0 16px;border-top:1px solid var(--outline-var);font-size:13px;color:var(--on-surface-var)}
 .mc-edit{color:var(--primary);font-weight:500;font-size:13px;text-decoration:none;padding:8px 10px;border-radius:8px}
 .mc-edit:hover{background:color-mix(in srgb,var(--primary) 10%,transparent)}
 table.mc-t{table-layout:fixed}
