@@ -254,3 +254,4 @@ table.mc-t tr.lost td.mc-nm{color:var(--on-surface-var)}
 
 /* Borders around cards and tables instead of lines between rows */
 .card,.mcard,.comp-card,.stat,.hl,details.week,.empty{border:1px solid var(--card-line)}
+table.lt thead th{border-bottom:1px solid var(--card-line)}
