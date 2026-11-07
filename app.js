@@ -356,12 +356,12 @@ function defendingTeamIds(c, selfId) {
 }
 const crown = t => DEFENDING.has(t.id) ? '<span class="ms crown" role="img" aria-label="Defending champions" title="Defending champions">crown</span>' : "";
 
-// A match card: header (when, plus an Edit link for admins), the two sides
-// with their scores and a trophy for the winner, then a footer with the court.
+// A match card: header (time, date for the league, court; plus an Edit link
+// for admins), then the two sides with their scores and a trophy for the winner.
 function matchCard({ when, edit, rows, cols, court }) {
-  return `<div class="mcard"><div class="mc-h"><span class="mc-when">${esc(when)}</span>${edit ? `<a class="mc-edit" href="${edit}">Edit</a>` : ""}</div>`
-    + `<table class="mc-t"><colgroup><col><col class="c-w">${cols}</colgroup><tbody>${rows}</tbody></table>`
-    + (court ? `<div class="mc-f"><span class="ms" aria-hidden="true">location_on</span>Court ${esc(court)}</div>` : "") + `</div>`;
+  const head = [when, court ? `Court ${court}` : ""].filter(Boolean).join(" · ");
+  return `<div class="mcard"><div class="mc-h"><span class="mc-when">${esc(head)}</span>${edit ? `<a class="mc-edit" href="${edit}">Edit</a>` : ""}</div>`
+    + `<table class="mc-t"><colgroup><col><col class="c-w">${cols}</colgroup><tbody>${rows}</tbody></table></div>`;
 }
 const trophyCell = won => `<td class="mc-w">${won ? '<span class="ms" role="img" aria-label="Winners" title="Winners">trophy</span>' : ""}</td>`;
 function compMatchCard(c, id, m, r) {
@@ -787,7 +787,7 @@ const fire = r => r.cur >= FIRE_STREAK ? `<span class="ms fire" role="img" aria-
 const formDots = form => form.length ? form.slice(-5).map(f => { const lab = f === "W" ? "Win" : "Loss"; return `<span class="fchip f${f}" role="img" aria-label="${lab}" title="${lab}"></span>`; }).join("") : `<span class="fnone">–</span>`;
 
 // League match card: up to 3 set columns. Tiebreak points sit small next to
-// each team's set score (7⁷ over 6⁵); a bagel gets a 🥯.
+// each team's set score (7⁷ over 6⁵).
 function leagueMatchCard(m, editable) {
   const s = matchScore(m);
   const row = (side, ids) => {
@@ -796,8 +796,7 @@ function leagueMatchCard(m, editable) {
       const st = m.sets[i]; if (!st) return `<td class="set"></td>`;
       const mine = +st[side], theirs = +st[side === "a" ? "b" : "a"], wonSet = mine > theirs;
       const tb = st.ta != null && st.tb != null ? `<sup title="Tiebreak">${side === "a" ? st.ta : st.tb}</sup>` : "";
-      const bagel = isBagel(mine, theirs) ? `<sup class="bagel" title="Bagel">🥯</sup>` : "";
-      return `<td class="set num${wonSet ? " sw" : ""}">${mine}${tb}${bagel}</td>`;
+      return `<td class="set num${wonSet ? " sw" : ""}">${mine}${tb}</td>`;
     }).join("");
     return `<tr class="${won ? "won" : "lost"}"><td class="l mc-nm"><span class="nm">${plink(ids[0])} &amp; ${plink(ids[1])}</span></td>${trophyCell(won)}${cells}</tr>`;
   };

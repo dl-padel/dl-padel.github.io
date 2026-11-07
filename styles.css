@@ -247,5 +247,3 @@ table.mc-t td.sw{color:var(--on-surface);font-weight:600}
 table.mc-t td.set sup{font-size:10px;line-height:0;margin-left:1px;font-weight:400}
 table.mc-t tr.won .nm{font-weight:600}
 table.mc-t tr.lost td.mc-nm{color:var(--on-surface-var)}
-.mc-f{display:flex;align-items:center;gap:4px;min-height:36px;padding:0 16px;border-top:1px solid var(--outline-var);font-size:13px;color:var(--on-surface-var)}
-.mc-f .ms{font-size:16px;width:16px;height:16px;line-height:16px}
