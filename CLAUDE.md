@@ -11,7 +11,10 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 ## Data (Firestore)
 - `players/{autoId}` → `{ name }`. Shared list so stats add up across comps.
 - `comps/{slug}` → `{ name, date "YYYY-MM-DD", start "HH:MM", gameMins, breakMins, teams[{id:"t1", name, p1, p2}] (team `name` is unused: teams always show as "P1 & P2", there's no team name box), matches[{id, round, court, a, b, sa, sb}] }`. `sa`/`sb` null = not played.
-- `admins/{lowercase email}` → any field. Added by hand in the Firebase console. Rules in `firestore.rules` (public read; writes need an admin with a verified email). Rules must be pasted into the console manually.
+- `league/{autoId}` → `{ date, a:[p1,p2], b:[p1,p2], sets:[{a, b, ta, tb}], createdAt, updatedAt, updatedBy }`. Best of 3; `ta`/`tb` are tiebreak points (null unless the set was 7-6). Loaded lazily (`ensureLeague`) only on league, profile and match-entry pages.
+- `admins/{lowercase email}` → any field. Added by hand in the Firebase console.
+- `scorers/{lowercase email}` → league scorers. Admins add/remove them on `#/admin`. Scorers can write `league` and create (not rename) players; nothing else.
+- Rules in `firestore.rules` (public read; comps writes need an admin, league writes an admin or scorer, verified email). Rules must be pasted into the Firebase console manually after every change.
 
 ## Competition rules
 - Teams of 2. 4 teams = 3 rounds on courts 1–2; 6 teams = 5 rounds on courts 1–3. Each round = game length + break (default 30 + 5).
@@ -20,10 +23,19 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 - A comp is "done" when every match has a score. Winners get a gold row with a trophy instead of "1".
 - Defending champions: a team with the same two players as the winners of the most recent finished comp before this one gets a gold crown, worked out automatically.
 
+## League (`#/league`)
+- Weekly doubles, partners change. Two tables: **Players** ranked by win % (need `LEAGUE_MIN` = 3 matches to be ranked; others listed under a "not ranked yet" line), then wins, set diff, game diff. **Pairs** ranked by total wins, then win %. Columns: P W L Win% Form.
+- Matches section: newest first, one card per day, rows like comp fixtures with up to 3 set columns. Tiebreak points as superscript on the losing 6; 🥯 superscript on a 0 in a 6-0 set.
+- 🔥 (`local_fire_department`, orange `#ff8a3d`) after a player or pair on `FIRE_STREAK` = 3+ wins in a row. League only; the comps table still has no badges.
+- Player profile `#/p/{id}` (tap any league name): played/won/win %, current and best streak, form, sets, games, bagels served/eaten, favourite partner (most matches together), biggest rival (most played against), partner and opponent tables, last 10 matches, competition played/won.
+- Match entry `#/league/add`, edit `#/league/m/{id}` (scorers and admins; + in the league header, edit icon on each match, "Scorers' entrance" footer link). Validates set scores (6-0..6-4, 7-5, 7-6), optional tiebreak for 7-6, 2 sets to win, no 3rd set after 2-0.
+- Future ideas Piers mentioned: planned fixtures / formal league with only league games counting, more stats.
+
 ## UI decisions (agreed with Piers, keep these)
 - Material 3 look, Roboto Flex plus Material Symbols Rounded. **Dark mode only**, vibrant brand colours generated with Material colour utilities from two seeds: purple `#8c3cff` and padel-ball yellow-green `#d4f22c`. Vivid purple (`--primary-container`) for filled buttons, lilac `--primary` for text accents and court numbers, ball colour (`--ball`) for the active nav pill, selected segmented buttons, trophy/crown icons and winning scores, purple-tinted near-black surfaces. Keep the ball green for brand moments only (form-guide win dots use a separate green).
 - Winners styling (homepage pill and the table's winning row): dark olive `--champ-row` `#364000` with pale lime text `#eaff81` and a ball-green trophy. Defending champions crown is small (12px) and raised like a seed number.
-- Homepage: no top bar. A hero with the centred logo (`logo.svg`, 180px wide) whose parts animate in together once per visit (court and lettering fade, green letters slide in from the sides; skipped for reduced motion; the hero node is kept across live redraws). Section title "David Lloyd Advanced Padel", no count. Neutral grey cards only, with colour only on pills. Exactly **one pill** per card: olive 🏆 winners (finished), red Live, or grey Upcoming. Title 24px. One inline details row: calendar date ("Sun, 27 Sept"), clock time ("8am"), 👥 "N teams"; 16px icons, 4px icon gap, 16px between items.
+- Homepage `#/` is a hub: hero logo, "David Lloyd Advanced Padel", then two cards, **League** and **Competitions** (Competitions card has one pill: red "Live now" or grey "Next: date"). The competitions list lives at `#/comps` with a normal top bar; comp pages go back there.
+- Hero: no top bar. A hero with the centred logo (`logo.svg`, 180px wide) whose parts animate in together once per visit (court and lettering fade, green letters slide in from the sides; skipped for reduced motion; the hero node is kept across live redraws). Comps list: neutral grey cards only, with colour only on pills. Exactly **one pill** per card: olive 🏆 winners (finished), red Live, or grey Upcoming. Title 24px. One inline details row: calendar date ("Sun, 27 Sept"), clock time ("8am"), 👥 "N teams"; 16px icons, 4px icon gap, 16px between items.
 - Comp page header uses the same shared details row (`detailsHtml`). No "|" dividers.
 - Comp page sections: Table, Fixtures (next round first with a small grey "Up next" label, styled like the others), Results (latest first). Sticky bottom nav with those 3 tabs (icons leaderboard, calendar_month, event_available), plus a refresh button in the header.
 - Fixtures and results are tables, one card per round, no header row: a court column (small "COURT" label over the number, spanning both rows), then one row per team with name and score. Faint line between the two teams, normal line between games. Scores same size as names; winner name and score semibold, winning score in ball green; loser greyed, regular weight.

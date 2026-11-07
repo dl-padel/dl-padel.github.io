@@ -2,17 +2,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
     // Admins are documents in the "admins" collection whose ID is their
     // Google email address in lowercase. Add them in the Firebase console.
     function isAdmin() {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(myEmail()));
+    }
+    // League scorers: added and removed by admins on the app's admin page.
+    function isScorer() {
+      return signedIn() && exists(/databases/$(database)/documents/scorers/$(myEmail()));
     }
 
     match /players/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isAdmin() || isScorer();
+      allow update, delete: if isAdmin();
     }
 
     match /comps/{id} {
@@ -20,8 +29,18 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /league/{id} {
+      allow read: if true;
+      allow write: if isAdmin() || isScorer();
+    }
+
+    match /scorers/{email} {
+      allow read: if isAdmin() || (request.auth != null && myEmail() == email);
+      allow write: if isAdmin();
+    }
+
     match /admins/{email} {
-      allow read: if request.auth != null && request.auth.token.email.lower() == email;
+      allow read: if request.auth != null && myEmail() == email;
       allow write: if false;
     }
   }

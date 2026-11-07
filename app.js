@@ -25,6 +25,10 @@ const S = {
   user: null, isAdmin: false, authReady: false,
   draft: null, draftId: null, dirty: false, pending: null, notice: null, saving: false,
   keepChamps: true,
+  isScorer: false, scorerChecked: false,
+  league: {}, leagueReady: false, leagueError: null, leagueShow: 30,
+  ldraft: null, ldraftId: null, carry: null,
+  scorers: null, scorersError: null,
 };
 
 onSnapshot(collection(db, "players"), snap => {
@@ -37,23 +41,49 @@ onSnapshot(collection(db, "comps"), snap => {
   S.compsReady = true; onData("comps");
 }, err => { S.loadError = err; render(); });
 
-let adminUnsub = null;
+let adminUnsub = null, scorerUnsub = null, scorersUnsub = null;
 onAuthStateChanged(auth, user => {
   S.user = user; S.isAdmin = false; S.adminChecked = false; S.adminError = null;
+  S.isScorer = false; S.scorerChecked = false;
   if (adminUnsub) { adminUnsub(); adminUnsub = null; }
+  if (scorerUnsub) { scorerUnsub(); scorerUnsub = null; }
+  if (scorersUnsub) { scorersUnsub(); scorersUnsub = null; S.scorers = null; }
   if (user && user.email) {
+    const email = user.email.toLowerCase();
     // A live listener retries on its own when the connection is slow or drops.
-    adminUnsub = onSnapshot(doc(db, "admins", user.email.toLowerCase()),
+    adminUnsub = onSnapshot(doc(db, "admins", email),
       snap => { S.isAdmin = snap.exists(); S.adminChecked = true; S.adminError = null; render(); },
       err => { S.adminError = err; S.adminChecked = true; render(); });
-  } else S.adminChecked = true;
+    // League scorers can add league matches but can't touch competitions.
+    scorerUnsub = onSnapshot(doc(db, "scorers", email),
+      snap => { S.isScorer = snap.exists(); S.scorerChecked = true; render(); },
+      () => { S.isScorer = false; S.scorerChecked = true; render(); });
+  } else { S.adminChecked = true; S.scorerChecked = true; }
   S.authReady = true; render();
 });
+const canScore = () => S.isAdmin || S.isScorer;
+
+// League matches only load on pages that need them, so competition pages stay light.
+let leagueUnsub = null;
+function ensureLeague() {
+  if (leagueUnsub) return;
+  leagueUnsub = onSnapshot(collection(db, "league"), snap => {
+    S.league = {}; snap.forEach(d => S.league[d.id] = d.data({ serverTimestamps: "estimate" }));
+    S.leagueReady = true; S.leagueError = null; onData("league");
+  }, err => { S.leagueError = err; S.leagueReady = true; render(); });
+}
+function ensureScorers() {
+  if (scorersUnsub || !S.isAdmin) return;
+  scorersUnsub = onSnapshot(collection(db, "scorers"), snap => {
+    S.scorers = []; snap.forEach(d => S.scorers.push(d.id)); S.scorers.sort(); S.scorersError = null; render();
+  }, err => { S.scorersError = err; S.scorers = []; render(); });
+}
 
 function onData(kind) {
   const r = route();
   // Don't overwrite an admin's unsaved edits with incoming data.
   if (r.name === "editComp" && S.draft) { if (kind === "players") render(); return; }
+  if (r.name === "leagueEdit" && S.ldraft) { if (kind === "players") render(); return; }
   render();
 }
 
@@ -164,6 +194,11 @@ function route() {
   const h = location.hash.replace(/^#\/?/, "");
   const p = h.split("/").map(decodeURIComponent);
   if (p[0] === "c" && p[1]) return { name: "comp", id: p[1] };
+  if (p[0] === "comps") return { name: "comps" };
+  if (p[0] === "league" && p[1] === "add") return { name: "leagueEdit", id: "new" };
+  if (p[0] === "league" && p[1] === "m" && p[2]) return { name: "leagueEdit", id: p[2] };
+  if (p[0] === "league") return { name: "league" };
+  if (p[0] === "p" && p[1]) return { name: "player", id: p[1] };
   if (p[0] === "admin" && p[1] === "c" && p[2]) return { name: "editComp", id: p[2] };
   if (p[0] === "admin") return { name: "admin" };
   return { name: "home" };
@@ -171,11 +206,12 @@ function route() {
 const go = h => { location.hash = h; };
 let lastRoute = "";
 addEventListener("hashchange", () => {
-  if (S.dirty && lastRoute.startsWith("#/admin/c/") && location.hash !== lastRoute) {
+  if (S.dirty && /^#\/(admin\/c|league\/add|league\/m)\b/.test(lastRoute) && location.hash !== lastRoute) {
     S.notice = { err: true, t: "You have unsaved changes. Save them or tap Discard first." };
     history.replaceState(null, "", lastRoute); render(); return;
   }
-  S.draft = null; S.draftId = null; S.dirty = false; S.pending = null; S.notice = null;
+  S.draft = null; S.draftId = null; S.ldraft = null; S.ldraftId = null; S.dirty = false; S.pending = null;
+  S.notice = S.carry; S.carry = null; // a message meant for the next page, e.g. "Match saved"
   render(); scrollTo(0, 0);
 });
 
@@ -187,8 +223,12 @@ function render() {
   const r = route();
   if (S.loadError) return renderError();
   if (r.name === "comp") return renderComp(r.id);
+  if (r.name === "comps") return renderComps();
   if (r.name === "admin") return renderAdmin();
   if (r.name === "editComp") return renderEditComp(r.id);
+  if (r.name === "league") { ensureLeague(); return renderLeague(); }
+  if (r.name === "leagueEdit") { ensureLeague(); return renderLeagueEdit(r.id); }
+  if (r.name === "player") { ensureLeague(); return renderPlayer(r.id); }
   return renderHome();
 }
 function renderError() {
@@ -201,7 +241,8 @@ function header(title, sub, o = {}) {
   if (o.back) h += `<a class="icon-btn" href="${o.back}" aria-label="Back"><span class="ms">arrow_back</span></a>`;
   h += `<div class="bar-title"><h1>${title}</h1>${sub ? `<div class="bar-sub">${sub}</div>` : ""}</div>`;
   if (o.refresh) h += `<button class="icon-btn" id="refresh" aria-label="Refresh scores" title="Refresh scores"><span class="ms">refresh</span></button>`;
-  if (o.admin) h += `<a class="icon-btn" href="${o.admin}" aria-label="Admin" title="Admin"><span class="ms">${S.isAdmin ? "edit_square" : "admin_panel_settings"}</span></a>`;
+  if (o.admin) h += `<a class="icon-btn" href="${o.admin}" aria-label="Admin" title="Admin"><span class="ms">edit_square</span></a>`;
+  if (o.extra) h += o.extra;
   return h + `</div></header>`;
 }
 // Homepage hero: the club logo, centred. Replaces the top bar on the homepage.
@@ -235,28 +276,47 @@ async function playHero() {
 }
 // Footer for public pages: WhatsApp group link, mock-serious small print and a quiet link to admin.
 const WHATSAPP_URL = "https://chat.whatsapp.com/KwsMD6jcUIwKcm8NZJQboH"; // group invite link; keep "Approve new participants" on in WhatsApp
-function footer() {
+function footer(secret = { href: "#/admin", text: "Super secret admin area" }) {
   return `<footer class="foot"><hr>
 <p>© ${new Date().getFullYear()} DL Padel. All rights reserved.</p>
 <p>Results are final and binding, except when disputed loudly in the car park, or via WhatsApp. Any resemblance to professional padel is purely coincidental. No balls were harmed in the making of this site, though several were lost over the fence.</p>
 <a class="wa" href="${WHATSAPP_URL}" target="_blank" rel="noopener"><img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="" width="20" height="20">Complaints department</a>
-<a class="secret" href="#/admin">Super secret admin area</a></footer>`;
+<a class="secret" href="${secret.href}">${secret.text}</a></footer>`;
 }
 function wire() {
   const r = document.getElementById("refresh");
   if (r) r.onclick = () => { r.classList.add("spin"); setTimeout(() => location.reload(), 250); };
 }
 
-// ----- Home -----
+// ----- Home: pick League or Competitions -----
 function renderHome() {
   document.title = SITE;
   if (!S.compsReady || !S.playersReady) { app.innerHTML = hero() + `<div class="loading">Loading…</div>`; return; }
+  const list = sortedComps(), n = list.length;
+  const live = list.find(([, c]) => status(c) === "live");
+  const next = list.filter(([, c]) => status(c) === "upcoming").sort(([, a], [, b]) => (a.date || "9").localeCompare(b.date || "9"))[0];
+  const line = (icon, text) => `<span class="card-line"><span class="ms" aria-hidden="true">${icon}</span>${esc(text)}</span>`;
+  const compPill = live ? `<span class="chip live">Live now</span>` : next ? `<span class="chip upcoming">Next: ${esc(shortDate(next[1].date) || "date to be set")}</span>` : "";
+  let h = hero() + `<main><section><div class="sec-h"><h2>David Lloyd Advanced Padel</h2></div><div class="comp-list">`;
+  h += `<a class="comp-card" href="#/league"><div class="card-main"><h3>League</h3><div class="card-lines">${line("sports_tennis", "Weekly matches")}${line("leaderboard", "Tables and player stats")}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
+  h += `<a class="comp-card" href="#/comps"><div class="card-main">${compPill ? `<div class="chips">${compPill}</div>` : ""}<h3>Competitions</h3><div class="card-lines">${line("trophy", `${n} competition${n === 1 ? "" : "s"}`)}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
+  h += `</div></section>${footer()}</main>`;
+  const oldHero = heroPlayed && app.querySelector(".hero"); // keep the logo (and any running animation) across live redraws
+  app.innerHTML = h;
+  if (oldHero) app.querySelector(".hero").replaceWith(oldHero);
+  wire(); playHero();
+}
+const shortDate = d => { const x = d ? new Date(d + "T12:00:00") : null; return x && !isNaN(x) ? `${DAYS[x.getDay()]}, ${x.getDate()} ${MONTHS[x.getMonth()]}` : ""; };
+
+// ----- Competitions list -----
+function renderComps() {
+  document.title = `Competitions · ${SITE}`;
+  let h = header("Competitions", "", { back: "#/" });
+  if (!S.compsReady || !S.playersReady) { app.innerHTML = h + `<div class="loading">Loading…</div>`; return; }
   const list = sortedComps();
-  let h = hero() + `<main>`;
-  h += `<section><div class="sec-h"><h2>David Lloyd Advanced Padel</h2></div>`;
+  h += `<main><section>`;
   if (!list.length) h += `<div class="empty">No competitions yet. The first one appears here once an admin creates it.</div>`;
   else {
-    const featured = list.find(([, c]) => status(c) === "live") || list.find(([, c]) => status(c) === "upcoming");
     h += `<div class="comp-list">` + list.map(([id, c]) => {
       const st = status(c), top = standings(c)[0];
       // One pill per card: winners when finished, otherwise the status.
@@ -267,10 +327,7 @@ function renderHome() {
     }).join("") + `</div>`;
   }
   h += `</section>${footer()}</main>`;
-  const oldHero = heroPlayed && app.querySelector(".hero"); // keep the logo (and any running animation) across live redraws
-  app.innerHTML = h;
-  if (oldHero) app.querySelector(".hero").replaceWith(oldHero);
-  wire(); playHero();
+  app.innerHTML = h; wire();
 }
 
 // ----- Competition page -----
@@ -307,9 +364,9 @@ function roundBlock(c, r, list, isNext) {
   return `<div class="round${isNext ? " next" : ""}"><div class="round-h">${isNext ? '<span class="chip upcoming">Up next</span>' : ""}<b>Round ${r}</b><span>·</span><span class="num">${roundTime(c, r)}</span></div><div class="card"><table class="fx"><colgroup><col class="c-court"><col><col class="c-sc"></colgroup><tbody>${list.map(m => matchRows(c, m)).join("")}</tbody></table></div></div>`;
 }
 function renderComp(id) {
-  if (!S.compsReady || !S.playersReady) { app.innerHTML = header(SITE, "", { back: "#/" }) + `<div class="loading">Loading…</div>`; return; }
+  if (!S.compsReady || !S.playersReady) { app.innerHTML = header(SITE, "", { back: "#/comps" }) + `<div class="loading">Loading…</div>`; return; }
   const c = S.comps[id];
-  if (!c) { app.innerHTML = header("Not found", "", { back: "#/" }) + `<main><div class="empty">This competition doesn't exist or has been deleted. <a href="#/">See all competitions</a></div></main>`; return; }
+  if (!c) { app.innerHTML = header("Not found", "", { back: "#/comps" }) + `<main><div class="empty">This competition doesn't exist or has been deleted. <a href="#/comps">See all competitions</a></div></main>`; return; }
   document.title = `${c.name} · ${SITE}`;
   DEFENDING = defendingTeamIds(c, id);
   const st = standings(c), R = roundsOf(c), anyDraw = st.some(r => r.D > 0), playedCount = c.matches.filter(played).length;
@@ -318,7 +375,7 @@ function renderComp(id) {
   let nextR = 0; for (let r = 1; r <= R; r++) if (byRound[r]?.some(m => !played(m))) { nextR = r; break; }
 
   const sub = detailsHtml(c);
-  let h = header(esc(c.name), sub, { back: "#/", refresh: true, admin: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : null }) + `<main class="has-nav">`;
+  let h = header(esc(c.name), sub, { back: "#/comps", refresh: true, admin: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : null }) + `<main class="has-nav">`;
 
   h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th class="l">Form</th></tr></thead><tbody>`;
   st.forEach((r, i) => {
@@ -341,18 +398,25 @@ function renderComp(id) {
 
   h += `</section>${footer()}</main>`;
 
-  const nav = (t, icon, label) => `<button data-t="${t}"><span class="pill"><span class="ms" aria-hidden="true">${icon}</span></span>${label}</button>`;
-  h += `<nav class="nav" aria-label="Sections"><div class="nav-in">${nav("table", "leaderboard", "Table")}${nav("fixtures", "calendar_month", "Fixtures")}${nav("results", "event_available", "Results")}</div></nav>`;
-
+  const tabs = [["table", "leaderboard", "Table"], ["fixtures", "calendar_month", "Fixtures"], ["results", "event_available", "Results"]];
+  h += sectionNav(tabs);
   const y = scrollY;
   app.innerHTML = h; wire();
   scrollTo(0, y);
+  wireSectionNav(tabs);
+}
+// Sticky bottom nav that scrolls to page sections and highlights the one in view.
+function sectionNav(tabs) {
+  const nav = ([t, icon, label]) => `<button data-t="${t}"><span class="pill"><span class="ms" aria-hidden="true">${icon}</span></span>${label}</button>`;
+  return `<nav class="nav" aria-label="Sections"><div class="nav-in">${tabs.map(nav).join("")}</div></nav>`;
+}
+function wireSectionNav(tabs) {
   const smooth = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
   app.querySelectorAll(".nav button").forEach(b => b.onclick = () => document.getElementById(b.dataset.t)?.scrollIntoView({ behavior: smooth }));
-  const ids = ["table", "fixtures", "results"];
+  const ids = tabs.map(t => t[0]);
   spyHandler = () => {
-    let cur = "table";
-    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = "results";
+    let cur = ids[0];
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = ids[ids.length - 1];
     else ids.forEach(i => { const el = document.getElementById(i); if (el && el.getBoundingClientRect().top < 140) cur = i; });
     app.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.t === cur));
   };
@@ -399,8 +463,31 @@ function renderAdmin() {
   h += `<div class="plist">` + plist.map(([id, p]) => `<div class="row"><div class="field"><input id="pn-${id}" data-p="${id}" value="${esc(p.name)}" aria-label="Player name" autocomplete="off"></div></div>`).join("") + `</div>`;
   h += `<p class="hint">Edit a name to fix a typo. It updates everywhere, including past competitions.</p></div></section>`;
 
+  ensureScorers();
+  h += `<section><div class="sec-h"><h2>League scorers</h2>${S.scorers ? `<span>${S.scorers.length}</span>` : ""}</div><div class="card">`;
+  h += `<p class="hint">Scorers can add and edit league matches (and add new players) but can't change competitions. Admins can do both. Add the Google email they'll sign in with.</p>`;
+  h += `<form class="row" id="adds"><div class="field"><label for="news">Email</label><input id="news" type="email" placeholder="name@gmail.com" autocomplete="off" autocapitalize="off" required></div><button class="btn filled" type="submit"><span class="ms">person_add</span>Add</button></form>`;
+  if (S.scorersError) h += `<p class="hint">Couldn't load scorers (${esc(S.scorersError.code || "error")}). The Firestore rules may need publishing.</p>`;
+  else if (!S.scorers) h += `<p class="hint">Loading…</p>`;
+  else h += `<div class="alist">` + (S.scorers.map(e => `<div class="arow"><span class="t">${esc(e)}</span><button class="icon-btn" data-rm="${esc(e)}" aria-label="Remove ${esc(e)}" title="Remove"><span class="ms">delete</span></button></div>`).join("") || `<p class="hint">No scorers yet.</p>`) + `</div>`;
+  h += `</div></section>`;
+
   h += `<section><div class="card"><button class="btn tonal" id="signout" style="align-self:flex-start"><span class="ms">logout</span>Sign out</button></div></section></main>`;
   app.innerHTML = h; wire(); wireGate();
+
+  document.getElementById("adds").onsubmit = async e => {
+    e.preventDefault();
+    const email = document.getElementById("news").value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { S.notice = { err: true, t: "That doesn't look like an email address." }; render(); return; }
+    try { await setDoc(doc(db, "scorers", email), { addedBy: S.user.email, addedAt: serverTimestamp() }); S.notice = { t: `${email} can now add league matches.` }; }
+    catch (err) { S.notice = { err: true, t: `Couldn't add scorer (${err.code}).` }; }
+    render();
+  };
+  app.querySelectorAll("button[data-rm]").forEach(b => b.onclick = async () => {
+    try { await deleteDoc(doc(db, "scorers", b.dataset.rm)); S.notice = { t: `Removed ${b.dataset.rm}.` }; }
+    catch (err) { S.notice = { err: true, t: `Couldn't remove (${err.code}).` }; }
+    render();
+  });
 
   document.getElementById("addp").onsubmit = async e => {
     e.preventDefault();
@@ -603,6 +690,346 @@ async function save(id) {
     S.draft = null; renderEditComp(targetId);
   } catch (err) {
     S.saving = false; S.notice = { err: true, t: `Couldn't save (${err.code || err.message}). Check your connection and try again.` }; renderEditComp(id);
+  }
+}
+
+// ---------- League ----------
+// Weekly doubles matches, best of 3 sets. Stored in league/{autoId} as
+// { date, a: [p1, p2], b: [p1, p2], sets: [{ a, b, ta, tb }] } where ta/tb are
+// tiebreak points (null unless the set went to a tiebreak).
+const LEAGUE_MIN = 3; // matches needed to be ranked in the players table
+const FIRE_STREAK = 3; // wins in a row for the fire icon
+const pct = r => r.P ? r.W / r.P : 0;
+const pctText = r => r.P ? Math.round(pct(r) * 100) + "%" : "–";
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const msOf = t => (t && typeof t.toMillis === "function") ? t.toMillis() : (typeof t === "number" ? t : Date.now());
+// Oldest first: by date, then by when it was entered.
+function leagueMatches() {
+  return Object.entries(S.league).map(([id, m]) => ({ id, ...m }))
+    .filter(m => Array.isArray(m.a) && Array.isArray(m.b) && Array.isArray(m.sets))
+    .sort((x, y) => (x.date || "").localeCompare(y.date || "") || msOf(x.createdAt) - msOf(y.createdAt));
+}
+// Sets and games for each side, and who won.
+function matchScore(m) {
+  let sa = 0, sb = 0, ga = 0, gb = 0;
+  m.sets.forEach(st => { ga += +st.a; gb += +st.b; if (+st.a > +st.b) sa++; else if (+st.b > +st.a) sb++; });
+  return { sa, sb, ga, gb, aWon: sa > sb };
+}
+const isBagel = (mine, theirs) => +mine === 0 && +theirs === 6;
+function blankRow(extra) { return { P: 0, W: 0, L: 0, SW: 0, SL: 0, GW: 0, GL: 0, form: [], cur: 0, best: 0, bagS: 0, bagE: 0, ...extra }; }
+function addResult(r, won, s, side) {
+  const mySets = side === "a" ? s.sa : s.sb, theirSets = side === "a" ? s.sb : s.sa;
+  const myGames = side === "a" ? s.ga : s.gb, theirGames = side === "a" ? s.gb : s.ga;
+  r.P++; won ? r.W++ : r.L++; r.SW += mySets; r.SL += theirSets; r.GW += myGames; r.GL += theirGames;
+  r.form.push(won ? "W" : "L");
+  r.cur = won ? r.cur + 1 : 0; r.best = Math.max(r.best, r.cur);
+}
+// Everything the league pages show, worked out from the full match list.
+function leagueStats() {
+  const players = {}, pairs = {}, matches = leagueMatches();
+  const P = id => players[id] ||= blankRow({ id, partners: {}, opps: {} });
+  matches.forEach(m => {
+    const s = matchScore(m);
+    [["a", m.a, m.b], ["b", m.b, m.a]].forEach(([side, mine, theirs]) => {
+      const won = side === "a" ? s.aWon : !s.aWon;
+      const bagS = m.sets.filter(st => side === "a" ? isBagel(st.b, st.a) : isBagel(st.a, st.b)).length;
+      const bagE = m.sets.filter(st => side === "a" ? isBagel(st.a, st.b) : isBagel(st.b, st.a)).length;
+      mine.forEach((id, i) => {
+        const r = P(id); addResult(r, won, s, side); r.bagS += bagS; r.bagE += bagE;
+        const mate = mine[1 - i], pt = r.partners[mate] ||= { P: 0, W: 0 };
+        pt.P++; if (won) pt.W++;
+        theirs.forEach(o => { const op = r.opps[o] ||= { P: 0, W: 0, L: 0 }; op.P++; won ? op.W++ : op.L++; });
+      });
+      const key = mine.slice().sort().join("|");
+      const pr = pairs[key] ||= blankRow({ ids: mine.slice().sort((x, y) => pname(x).localeCompare(pname(y))) });
+      addResult(pr, won, s, side); pr.bagS += bagS; pr.bagE += bagE;
+    });
+  });
+  const tieBreak = (x, y) => (y.SW - y.SL) - (x.SW - x.SL) || (y.GW - y.GL) - (x.GW - x.GL);
+  const playerRows = Object.values(players).sort((x, y) =>
+    (y.P >= LEAGUE_MIN) - (x.P >= LEAGUE_MIN) || pct(y) - pct(x) || y.W - x.W || tieBreak(x, y) || pname(x.id).localeCompare(pname(y.id)));
+  const pairRows = Object.values(pairs).sort((x, y) => y.W - x.W || pct(y) - pct(x) || tieBreak(x, y));
+  return { players, playerRows, pairRows, matches };
+}
+const plink = id => `<a class="plink" href="#/p/${encodeURIComponent(id)}">${esc(pname(id) || "Unknown")}</a>`;
+const fire = r => r.cur >= FIRE_STREAK ? `<span class="ms fire" role="img" aria-label="${r.cur} wins in a row" title="${r.cur} wins in a row">local_fire_department</span>` : "";
+const formDots = form => form.length ? form.slice(-5).map(f => { const lab = f === "W" ? "Win" : "Loss"; return `<span class="fchip f${f}" role="img" aria-label="${lab}" title="${lab}"></span>`; }).join("") : `<span class="fnone">–</span>`;
+
+// Two table rows per match: each pair with its set scores. Tiebreak points
+// sit small next to the losing score, tennis style; a bagel gets a 🥯.
+function leagueMatchRows(m, editable) {
+  const s = matchScore(m), n = m.sets.length;
+  const row = (side, ids, first) => {
+    const won = side === "a" ? s.aWon : !s.aWon;
+    const cells = [0, 1, 2].map(i => {
+      const st = m.sets[i]; if (!st) return `<td class="set"></td>`;
+      const mine = +st[side], theirs = +st[side === "a" ? "b" : "a"], wonSet = mine > theirs;
+      const tb = st.ta != null && st.tb != null && !wonSet ? `<sup>${side === "a" ? st.ta : st.tb}</sup>` : "";
+      const bagel = isBagel(mine, theirs) ? `<sup class="bagel" title="Bagel">🥯</sup>` : "";
+      return `<td class="set num${wonSet ? " sw" : ""}">${mine}${tb}${bagel}</td>`;
+    }).join("");
+    const edit = editable && first ? `<td class="ed" rowspan="2"><a class="icon-btn" href="#/league/m/${encodeURIComponent(m.id)}" aria-label="Edit match"><span class="ms">edit</span></a></td>` : "";
+    return `<tr class="${first ? "m1" : "m2"} ${won ? "won" : "lost"}"><td class="l fx-team"><span class="nm">${plink(ids[0])} &amp; ${plink(ids[1])}</span></td>${cells}${edit}</tr>`;
+  };
+  return row("a", m.a, true) + row("b", m.b, false);
+}
+function leagueMatchTable(list, editable) {
+  return `<div class="card"><table class="fx lg"><colgroup><col>${"<col class=\"c-set\">".repeat(3)}${editable ? '<col class="c-ed">' : ""}</colgroup><tbody>${list.map(m => leagueMatchRows(m, editable)).join("")}</tbody></table></div>`;
+}
+// Newest first, one block per day.
+function leagueMatchBlocks(list, editable) {
+  const byDate = [];
+  list.slice().reverse().forEach(m => { const last = byDate[byDate.length - 1]; if (last && last.date === m.date) last.list.push(m); else byDate.push({ date: m.date, list: [m] }); });
+  return byDate.map(g => `<div class="round"><div class="round-h"><b>${esc(shortDate(g.date) || "No date")}</b><span>·</span><span>${g.list.length} match${g.list.length === 1 ? "" : "es"}</span></div>${leagueMatchTable(g.list, editable)}</div>`).join("");
+}
+function leagueGateMsg() {
+  const e = S.leagueError;
+  return `<div class="msg err">Couldn't load the league (${esc(e.code || e.message)}). If it's new, the Firestore security rules need publishing.</div>`;
+}
+
+function renderLeague() {
+  document.title = `League · ${SITE}`;
+  const add = canScore() ? `<a class="icon-btn" href="#/league/add" aria-label="Add a match" title="Add a match"><span class="ms">add</span></a>` : "";
+  const top = sub => header("League", sub, { back: "#/", refresh: true, extra: add });
+  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top("") + `<div class="loading">Loading…</div>`; return; }
+  if (S.leagueError) { app.innerHTML = top("") + `<main>${leagueGateMsg()}</main>`; wire(); return; }
+  const st = leagueStats(), n = st.matches.length;
+  let h = top(n ? `${n} match${n === 1 ? "" : "es"} · ${st.playerRows.length} players` : "") + `<main class="has-nav">`;
+  if (S.notice) h += `<div class="msg${S.notice.err ? " err" : ""}">${esc(S.notice.t)}</div>`;
+
+  // Players: ranked by win %, once they've played enough to count.
+  h += `<section id="players"><div class="sec-h"><h2>Players</h2><span>By win %</span></div>`;
+  if (!n) h += `<div class="empty">No matches yet. ${canScore() ? `Tap <b>+</b> to add the first one.` : "The table fills in as matches are added."}</div>`;
+  else {
+    h += `<div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th></th><th class="l">Player</th><th>P</th><th>W</th><th>L</th><th>Win%</th><th class="l">Form</th></tr></thead><tbody>`;
+    let shownSep = false;
+    st.playerRows.forEach((r, i) => {
+      const ok = r.P >= LEAGUE_MIN;
+      if (!ok && !shownSep) { shownSep = true; h += `<tr class="sep"><td colspan="7">Fewer than ${LEAGUE_MIN} matches · not ranked yet</td></tr>`; }
+      h += `<tr${ok && i === 0 ? ' class="lead"' : ""}><td class="pos num">${ok ? i + 1 : ""}</td><td class="team l">${plink(r.id)}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td><td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
+    });
+    h += `</tbody></table></div></div>`;
+  }
+  h += `</section>`;
+
+  // Pairs: ranked by total wins.
+  h += `<section id="pairs"><div class="sec-h"><h2>Pairs</h2><span>By wins</span></div>`;
+  if (!n) h += `<div class="empty">Pairs appear here once they've played.</div>`;
+  else {
+    h += `<div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th></th><th class="l">Pair</th><th>P</th><th>W</th><th>L</th><th>Win%</th><th class="l">Form</th></tr></thead><tbody>`;
+    st.pairRows.forEach((r, i) => {
+      h += `<tr${i === 0 ? ' class="lead"' : ""}><td class="pos num">${i + 1}</td><td class="team l">${plink(r.ids[0])} &amp; ${plink(r.ids[1])}${fire(r)}</td><td>${r.P}</td><td class="w">${r.W}</td><td>${r.L}</td><td>${pctText(r)}</td><td class="l"><div class="form">${formDots(r.form)}</div></td></tr>`;
+    });
+    h += `</tbody></table></div></div>`;
+  }
+  h += `</section>`;
+
+  h += `<section id="matches"><div class="sec-h"><h2>Matches</h2><span>Latest first</span></div>`;
+  if (!n) h += `<div class="empty">Results appear here as they're added.</div>`;
+  else {
+    const shown = st.matches.slice(-S.leagueShow);
+    h += leagueMatchBlocks(shown, canScore());
+    if (shown.length < n) h += `<button class="btn tonal" id="more" style="align-self:center">Show older matches</button>`;
+  }
+  h += `</section>${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
+  const tabs = [["players", "person", "Players"], ["pairs", "group", "Pairs"], ["matches", "sports_tennis", "Matches"]];
+  h += sectionNav(tabs);
+  const y = scrollY;
+  app.innerHTML = h; wire(); scrollTo(0, y);
+  wireSectionNav(tabs);
+  const more = document.getElementById("more"); if (more) more.onclick = () => { S.leagueShow += 30; renderLeague(); };
+}
+
+// ----- Player profile -----
+function renderPlayer(id) {
+  const name = pname(id);
+  document.title = `${name || "Player"} · ${SITE}`;
+  const top = header(esc(name || "Player"), "", { back: "#/league" });
+  if (!S.playersReady || !S.leagueReady || !S.compsReady) { app.innerHTML = top + `<div class="loading">Loading…</div>`; return; }
+  if (!S.players[id]) { app.innerHTML = top + `<main><div class="empty">This player isn't in the list any more. <a href="#/league">Back to the league</a></div></main>`; wire(); return; }
+  let h = top + `<main>`;
+  if (S.leagueError) h += leagueGateMsg();
+  const st = leagueStats(), r = st.players[id];
+  const tile = (label, value, sub) => `<div class="stat"><small>${label}</small><b class="num">${value}</b>${sub ? `<span>${sub}</span>` : ""}</div>`;
+
+  h += `<section><div class="sec-h"><h2>League</h2>${r ? `<span>${r.P >= LEAGUE_MIN ? `Ranked ${st.playerRows.indexOf(r) + 1} of ${st.playerRows.filter(x => x.P >= LEAGUE_MIN).length}` : `${LEAGUE_MIN - r.P} more to be ranked`}</span>` : ""}</div>`;
+  if (!r) h += `<div class="empty">No league matches yet.</div>`;
+  else {
+    h += `<div class="stats">`
+      + tile("Played", r.P) + tile("Won", r.W) + tile("Win rate", pctText(r))
+      + tile("Streak", r.cur ? `${r.cur}W${r.cur >= FIRE_STREAK ? ` <span class="ms fire" aria-hidden="true">local_fire_department</span>` : ""}` : (r.form.length ? "–" : "0"), r.cur ? "wins in a row" : "")
+      + tile("Best streak", r.best, "wins in a row") + tile("Form", `<div class="form">${formDots(r.form)}</div>`)
+      + tile("Sets", `${r.SW}–${r.SL}`) + tile("Games", `${r.GW}–${r.GL}`) + tile("Bagels", `${r.bagS} <span class="dim">/</span> ${r.bagE}`, "served / eaten")
+      + `</div>`;
+    // Partner and rival highlights
+    const partners = Object.entries(r.partners).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || pname(a).localeCompare(pname(b)));
+    const opps = Object.entries(r.opps).sort(([a, x], [b, y]) => y.P - x.P || y.L - x.L || pname(a).localeCompare(pname(b)));
+    const hl = (label, icon, pid, text) => `<div class="hl"><span class="ms" aria-hidden="true">${icon}</span><div><small>${label}</small><b>${plink(pid)}</b><span>${text}</span></div></div>`;
+    h += `<div class="hls">`;
+    if (partners[0]) { const [pid, x] = partners[0]; h += hl("Favourite partner", "handshake", pid, `${x.P} match${x.P === 1 ? "" : "es"} together, ${x.W} won`); }
+    if (opps[0]) { const [pid, x] = opps[0]; h += hl("Biggest rival", "swords", pid, `Played ${x.P}, won ${x.W}, lost ${x.L}`); }
+    h += `</div>`;
+    h += `</section><section><div class="sec-h"><h2>Partners</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">With</th><th>P</th><th>W</th><th>Win%</th></tr></thead><tbody>`
+      + partners.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${pctText(x)}</td></tr>`).join("")
+      + `</tbody></table></div></div></section>`;
+    h += `<section><div class="sec-h"><h2>Opponents</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">Against</th><th>P</th><th>W</th><th>L</th></tr></thead><tbody>`
+      + opps.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${x.L}</td></tr>`).join("")
+      + `</tbody></table></div></div></section>`;
+    const mine = st.matches.filter(m => m.a.includes(id) || m.b.includes(id)).slice(-10);
+    h += `<section><div class="sec-h"><h2>Recent matches</h2><span>Last ${mine.length}</span></div>${leagueMatchBlocks(mine, false)}`;
+  }
+  h += `</section>`;
+
+  // Competition record
+  const comps = sortedComps().filter(([, c]) => c.teams.some(t => t.p1 === id || t.p2 === id));
+  const won = comps.filter(([, c]) => { if (status(c) !== "done") return false; const t = standings(c)[0]?.t; return t && (t.p1 === id || t.p2 === id); });
+  h += `<section><div class="sec-h"><h2>Competitions</h2></div>`;
+  h += comps.length ? `<div class="stats">${tile("Played", comps.length)}${tile("Won", won.length ? `${won.length} <span class="ms trophy" aria-hidden="true">trophy</span>` : 0)}</div>` : `<div class="empty">No competitions yet.</div>`;
+  h += `</section>${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
+  app.innerHTML = h; wire();
+}
+
+// ----- Add or edit a league match (scorers and admins) -----
+function scorerGate() {
+  if (!S.authReady) return `<div class="loading">Checking sign-in…</div>`;
+  if (!S.user) return `<div class="card signin"><p class="hint">League scorers sign in with Google to add matches. On iPhone, use Safari.</p><button class="btn filled" id="signin"><span class="ms">login</span>Sign in with Google</button></div>`;
+  if (!canScore() && (!S.adminChecked || !S.scorerChecked)) return `<div class="loading">Checking access…</div>`;
+  if (!canScore()) return `<div class="card signin"><p>You're signed in as <b>${esc(S.user.email)}</b>, but this account can't add league matches yet.</p><p class="hint">Ask an admin to add your email as a league scorer.</p><button class="btn tonal" id="signout">Sign out</button></div>`;
+  return null;
+}
+// Best of 3 sets. Returns an error message, or null if the score is valid.
+function checkSets(sets) {
+  const done = [];
+  for (let i = 0; i < sets.length; i++) {
+    const st = sets[i], n = `Set ${i + 1}`;
+    const empty = st.a === null && st.b === null;
+    if (empty) { if (sets.slice(i + 1).some(x => x.a !== null || x.b !== null)) return `${n} is empty but a later set has a score.`; break; }
+    if (st.a === null || st.b === null) return `${n} needs a score for both pairs.`;
+    const w = Math.max(st.a, st.b), l = Math.min(st.a, st.b);
+    if (!((w === 6 && l <= 4) || (w === 7 && (l === 5 || l === 6)))) return `${n}: ${st.a}–${st.b} isn't a finished set. Sets end 6–0 to 6–4, 7–5 or 7–6.`;
+    if (st.ta !== null || st.tb !== null) {
+      if (l !== 6) return `${n}: only a 7–6 set has a tiebreak.`;
+      if (st.ta === null || st.tb === null) return `${n}: enter both tiebreak scores, or leave both empty.`;
+      const tw = Math.max(st.ta, st.tb), tl = Math.min(st.ta, st.tb);
+      if ((st.ta > st.tb) !== (st.a > st.b)) return `${n}: the tiebreak winner should also win the set.`;
+      if (tw < 7 || tw - tl < 2) return `${n}: a tiebreak is won by reaching 7, 2 points clear (e.g. 7–5 or 9–7).`;
+    }
+    done.push(st);
+  }
+  let a = 0, b = 0;
+  for (let i = 0; i < done.length; i++) {
+    if (a === 2 || b === 2) return "The match was already won after 2 sets. Clear set 3.";
+    done[i].a > done[i].b ? a++ : b++;
+  }
+  if (a < 2 && b < 2) return done.length < 2 ? "Enter at least 2 sets." : "Someone needs to win 2 sets. Add set 3.";
+  return null;
+}
+function renderLeagueEdit(id) {
+  const isNew = id === "new";
+  document.title = `${isNew ? "Add match" : "Edit match"} · ${SITE}`;
+  let h = header(isNew ? "Add match" : "Edit match", S.user ? esc(S.user.email) : "", { back: "#/league" }) + `<main class="admin has-save">`;
+  if (S.notice) h += `<div class="msg${S.notice.err ? " err" : ""}">${esc(S.notice.t)}</div>`;
+  const gate = scorerGate();
+  if (gate) { app.innerHTML = h + gate + `</main>`; wire(); wireGate(); return; }
+  if (!S.leagueReady || !S.playersReady) { app.innerHTML = h + `<div class="loading">Loading…</div></main>`; return; }
+  if (S.leagueError) { app.innerHTML = h + leagueGateMsg() + `</main>`; wire(); return; }
+
+  if (!S.ldraft || S.ldraftId !== id) {
+    const blankSet = () => ({ a: null, b: null, ta: null, tb: null });
+    if (isNew) S.ldraft = { date: todayISO(), a: ["", ""], b: ["", ""], sets: [blankSet(), blankSet(), blankSet()] };
+    else if (S.league[id]) {
+      const m = clone(S.league[id]);
+      S.ldraft = { date: m.date || todayISO(), a: m.a.slice(), b: m.b.slice(), sets: [0, 1, 2].map(i => ({ ...blankSet(), ...(m.sets[i] || {}) })) };
+    } else { app.innerHTML = h + `<div class="empty">This match doesn't exist any more. <a href="#/league">Back to the league</a></div></main>`; wire(); return; }
+    S.ldraftId = id;
+  }
+  const d = S.ldraft, sc = scrollY;
+  const pairLabel = side => [pname(d[side][0]), pname(d[side][1])].filter(Boolean).join(" & ") || (side === "a" ? "Pair A" : "Pair B");
+
+  h += `<section><div class="sec-h"><h2>Match</h2></div><div class="card">
+    <div class="field"><label for="m-date">Date played</label><input type="date" id="m-date" value="${esc(d.date)}"></div>`;
+  ["a", "b"].forEach(side => {
+    h += `<div class="team-ed"><h4>${side === "a" ? "Pair A" : "Pair B"}</h4><div class="row">
+      <div class="field"><label for="${side}0">Player 1</label>${playerSelect(side + "0", d[side][0])}</div>
+      <div class="field"><label for="${side}1">Player 2</label>${playerSelect(side + "1", d[side][1])}</div></div></div>`;
+  });
+  h += `<form class="row" id="addp"><div class="field"><label for="newp">Player not listed? Add them</label><input id="newp" placeholder="Name" autocomplete="off"></div><button class="btn tonal" type="submit"><span class="ms">person_add</span>Add</button></form>`;
+  h += `</div></section>`;
+
+  h += `<section><div class="sec-h"><h2>Score</h2><span>Best of 3 sets</span></div><div class="card">`;
+  h += `<div class="set-row set-head"><span></span><span title="${esc(pairLabel("a"))}">${esc(pairLabel("a"))}</span><span></span><span title="${esc(pairLabel("b"))}">${esc(pairLabel("b"))}</span></div>`;
+  d.sets.forEach((st, i) => {
+    const num = (k, v, lab) => `<input type="number" inputmode="numeric" min="0" max="99" data-s="${i}" data-k="${k}" value="${v ?? ""}" aria-label="${lab}">`;
+    h += `<div class="set-row"><span class="set-l">Set ${i + 1}</span>${num("a", st.a, `Set ${i + 1}, ${pairLabel("a")}`)}<span class="dash">–</span>${num("b", st.b, `Set ${i + 1}, ${pairLabel("b")}`)}</div>`;
+    const tie = Math.max(st.a ?? 0, st.b ?? 0) === 7 && Math.min(st.a ?? 0, st.b ?? 0) === 6;
+    if (tie || st.ta !== null || st.tb !== null) h += `<div class="set-row tb"><span class="set-l">Tiebreak</span>${num("ta", st.ta, `Set ${i + 1} tiebreak, ${pairLabel("a")}`)}<span class="dash">–</span>${num("tb", st.tb, `Set ${i + 1} tiebreak, ${pairLabel("b")}`)}</div>`;
+  });
+  h += `<p class="hint">Leave set 3 empty if it was won in 2. A tiebreak row appears for a 7–6 set; its scores are optional.</p></div></section>`;
+
+  if (!isNew) {
+    h += `<section><div class="sec-h"><h2>Delete</h2></div><div class="card">`;
+    h += S.pending?.type === "ldelete"
+      ? `<div class="confirm"><p>Delete this match? It comes off the tables and everyone's stats.</p><div class="row"><button class="btn danger" id="cf-yes">Delete match</button><button class="btn text" id="cf-no">Cancel</button></div></div>`
+      : `<button class="btn danger" id="del" style="align-self:flex-start"><span class="ms">delete</span>Delete match</button>`;
+    h += `</div></section>`;
+  }
+  h += `</main><div class="savebar"><div class="savebar-in"><p id="sb-msg">${S.saving ? "Saving…" : isNew ? "Not added yet" : S.dirty ? "Unsaved changes" : "Everything is saved"}</p><button class="btn text" id="discard">${isNew ? "Cancel" : "Discard"}</button><button class="btn filled" id="save"${S.saving || (!isNew && !S.dirty) ? " disabled" : ""}><span class="ms">cloud_upload</span>${isNew ? "Add match" : "Save"}</button></div></div>`;
+  app.innerHTML = h; wire(); scrollTo(0, sc);
+
+  const markDirty = () => {
+    S.dirty = true;
+    const p = document.getElementById("sb-msg"), s = document.getElementById("save");
+    if (p && !isNew) p.textContent = "Unsaved changes";
+    if (s) s.disabled = false;
+  };
+  document.getElementById("m-date").oninput = e => { d.date = e.target.value; markDirty(); };
+  ["a", "b"].forEach(side => [0, 1].forEach(i => {
+    document.getElementById(side + i).onchange = e => { d[side][i] = e.target.value; markDirty(); renderLeagueEdit(id); };
+  }));
+  app.querySelectorAll("input[data-s]").forEach(inp => {
+    inp.oninput = () => { const v = inp.value.trim(); d.sets[+inp.dataset.s][inp.dataset.k] = v === "" ? null : Math.max(0, Math.min(99, parseInt(v, 10) || 0)); markDirty(); };
+    // Redraw on change so the tiebreak row appears or goes as the set score changes.
+    if (inp.dataset.k === "a" || inp.dataset.k === "b") inp.onchange = () => {
+      const st = d.sets[+inp.dataset.s];
+      const tie = Math.max(st.a ?? 0, st.b ?? 0) === 7 && Math.min(st.a ?? 0, st.b ?? 0) === 6;
+      if (!tie && (st.ta !== null || st.tb !== null)) { st.ta = null; st.tb = null; }
+      const shown = !!app.querySelector(`input[data-s="${inp.dataset.s}"][data-k="ta"]`);
+      if (shown !== tie) renderLeagueEdit(id);
+    };
+  });
+  document.getElementById("addp").onsubmit = async e => {
+    e.preventDefault();
+    const name = document.getElementById("newp").value.trim(); if (!name) return;
+    if (Object.values(S.players).some(p => p.name.toLowerCase() === name.toLowerCase())) { S.notice = { err: true, t: `${name} is already in the player list.` }; renderLeagueEdit(id); return; }
+    try { await addDoc(collection(db, "players"), { name, createdAt: serverTimestamp() }); S.notice = { t: `Added ${name}. Pick them from a player list.` }; }
+    catch (err) { S.notice = { err: true, t: `Couldn't add player (${err.code}).` }; }
+    renderLeagueEdit(id);
+  };
+  const del = document.getElementById("del"); if (del) del.onclick = () => { S.pending = { type: "ldelete" }; renderLeagueEdit(id); };
+  const no = document.getElementById("cf-no"); if (no) no.onclick = () => { S.pending = null; renderLeagueEdit(id); };
+  const yes = document.getElementById("cf-yes"); if (yes) yes.onclick = async () => {
+    try { await deleteDoc(doc(db, "league", id)); S.dirty = false; S.carry = { t: "Match deleted." }; go("#/league"); }
+    catch (err) { S.pending = null; S.notice = { err: true, t: `Couldn't delete (${err.code}).` }; renderLeagueEdit(id); }
+  };
+  document.getElementById("discard").onclick = () => { S.dirty = false; go("#/league"); };
+  document.getElementById("save").onclick = () => saveLeagueMatch(id);
+}
+async function saveLeagueMatch(id) {
+  const d = S.ldraft, fail = t => { S.notice = { err: true, t }; renderLeagueEdit(id); scrollTo(0, 0); };
+  const four = [...d.a, ...d.b];
+  if (!d.date) return fail("Pick the date the match was played.");
+  if (four.some(p => !p)) return fail("Pick all four players.");
+  if (new Set(four).size !== 4) return fail("Someone is picked twice. Each player can only be in the match once.");
+  const err = checkSets(d.sets); if (err) return fail(err);
+  const sets = d.sets.filter(st => st.a !== null).map(st => ({ a: st.a, b: st.b, ta: st.ta, tb: st.tb }));
+  const data = { date: d.date, a: d.a.slice(), b: d.b.slice(), sets, updatedAt: serverTimestamp(), updatedBy: S.user.email };
+  S.saving = true; renderLeagueEdit(id);
+  try {
+    if (id === "new") await addDoc(collection(db, "league"), { ...data, createdAt: serverTimestamp() });
+    else await updateDoc(doc(db, "league", id), data);
+    S.saving = false; S.dirty = false; S.carry = { t: id === "new" ? "Match added. Tables are updated." : "Match saved." }; go("#/league");
+  } catch (e) {
+    S.saving = false; fail(`Couldn't save (${e.code || e.message}). Check your connection and try again.`);
   }
 }
 
