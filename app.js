@@ -937,7 +937,7 @@ function renderLeague() {
 function recordPanel(r) {
   const bar = (title, won, total) => {
     const pc = total ? Math.round(won / total * 100) : 0;
-    return `<div class="rp-row"><div class="rp-top"><span class="rp-t">${title}</span><span class="rp-v"><b class="num">${won}</b> of ${total}<small class="num">${total ? pc + "%" : "–"}</small></span></div>`
+    return `<div class="rp-row"><div class="rp-top"><span class="rp-t">${title}</span><span class="rp-v"><b class="num">${won}</b> of ${total}</span></div>`
       + `<div class="rp-bar" role="img" aria-label="${won} of ${total}"><span style="width:${pc}%"></span></div></div>`;
   };
   let h = `<div class="rp card">` + bar("Matches won", r.W, r.P) + bar("Sets won", r.SW, r.SW + r.SL) + bar("Games won", r.GW, r.GW + r.GL);
@@ -958,10 +958,10 @@ function renderPlayer(id) {
 
   // Hero: big name (with a flame when on fire), form underneath, then the rank.
   const ranked = r && r.P >= LEAGUE_MIN;
-  const rankText = !r ? "No league matches yet" : ranked ? `Ranked ${st.playerRows.indexOf(r) + 1} of ${st.playerRows.filter(x => x.P >= LEAGUE_MIN).length} in the league` : `${LEAGUE_MIN - r.P} more match${LEAGUE_MIN - r.P === 1 ? "" : "es"} to be ranked`;
-  h += `<section class="p-hero"><h2>${esc(name)}${r ? fire(r) : ""}</h2>${r ? `<div class="form">${formDots(r.form)}</div>` : ""}<p>${rankText}</p></section>`;
+  const rankText = !r ? "Unranked" : ranked ? `Rank ${st.playerRows.indexOf(r) + 1}/${st.playerRows.filter(x => x.P >= LEAGUE_MIN).length}` : `Unranked · ${LEAGUE_MIN - r.P} more match${LEAGUE_MIN - r.P === 1 ? "" : "es"} to go`;
+  h += `<section class="p-hero"><p>${rankText}</p><h2>${esc(name)}${r ? fire(r) : ""}</h2>${r ? `<div class="form">${formDots(r.form)}</div>` : ""}</section>`;
 
-  h += `<section><div class="sec-h"><h2>League</h2>${r ? `<span>${r.P} match${r.P === 1 ? "" : "es"}</span>` : ""}</div>`;
+  h += `<section>`;
   if (!r) h += `<div class="empty">No league matches yet.</div>`;
   else {
     h += recordPanel(r);
@@ -972,11 +972,10 @@ function renderPlayer(id) {
     h += `<div class="stats two">`;
     if (partners[0]) { const [pid, x] = partners[0]; h += tile("Favourite partner", plink(pid), "handshake", false, `${nm(x.P)} together, ${x.W} won`); }
     if (opps[0]) { const [pid, x] = opps[0]; h += tile("Biggest rival", plink(pid), "swords", false, `Played ${x.P}, won ${x.W}`); }
-    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", `Court ${esc(ct)}`, "location_on", false, `${nm(x.P)}, ${x.W} won`); }
-    h += tile(r.cur ? "Wins in a row" : "Current streak", r.cur || "–", "local_fire_department", r.cur >= FIRE_STREAK, r.cur >= FIRE_STREAK ? "On fire" : "");
+    h += tile("Bagels served", r.bagS, "bakery_dining");
+    h += tile("Bagels eaten", r.bagE, "bakery_dining");
     h += tile("Best win streak", r.best, "trending_up");
-    h += tile("Bagels served", r.bagS, "bakery_dining", false, "Sets won 6–0");
-    h += tile("Bagels eaten", r.bagE, "bakery_dining", false, "Sets lost 0–6");
+    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", `Court ${esc(ct)}`, "location_on", false, `${nm(x.P)}, ${x.W} won`); }
     h += `</div>`;
     h += `</section><section><div class="sec-h"><h2>Partners</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">With</th><th>P</th><th>W</th><th>Win%</th></tr></thead><tbody>`
       + partners.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${pctText(x)}</td></tr>`).join("")
