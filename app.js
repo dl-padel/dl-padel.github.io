@@ -955,15 +955,16 @@ function renderPlayer(id) {
   let h = top + `<main>`;
   if (S.leagueError) h += leagueGateMsg();
   const st = leagueStats(), r = st.players[id];
-  const tile = (label, value, sub) => `<div class="stat"><small>${label}</small><b class="num">${value}</b>${sub ? `<span>${sub}</span>` : ""}</div>`;
+  // Stat box: small icon top left, the stat large at the bottom with its label under it.
+  const tile = (label, value, icon, hot) => `<div class="stat${hot ? " hot" : ""}"><span class="ms" aria-hidden="true">${icon}</span><b class="num">${value}</b><small>${label}</small></div>`;
 
   h += `<section><div class="sec-h"><h2>League</h2>${r ? `<span>${r.P >= LEAGUE_MIN ? `Ranked ${st.playerRows.indexOf(r) + 1} of ${st.playerRows.filter(x => x.P >= LEAGUE_MIN).length}` : `${LEAGUE_MIN - r.P} more to be ranked`}</span>` : ""}</div>`;
   if (!r) h += `<div class="empty">No league matches yet.</div>`;
   else {
     h += `<div class="stats">`
-      + tile("Played", r.P)
-      + tile("Streak", r.cur ? `${r.cur}W${r.cur >= FIRE_STREAK ? ` <span class="ms fire" aria-hidden="true">local_fire_department</span>` : ""}` : (r.form.length ? "–" : "0"), r.cur ? "wins in a row" : "")
-      + tile("Form", `<div class="form">${formDots(r.form)}</div>`)
+      + tile("Played", r.P, "sports_tennis")
+      + tile(r.cur ? "Wins in a row" : "Win streak", r.cur || "–", "local_fire_department", r.cur >= FIRE_STREAK)
+      + tile("Form", `<div class="form">${formDots(r.form)}</div>`, "show_chart")
       + `</div>`;
     h += recordPanel(r);
     // Partner and rival highlights
@@ -991,7 +992,7 @@ function renderPlayer(id) {
   const comps = sortedComps().filter(([, c]) => c.teams.some(t => t.p1 === id || t.p2 === id));
   const won = comps.filter(([, c]) => { if (status(c) !== "done") return false; const t = standings(c)[0]?.t; return t && (t.p1 === id || t.p2 === id); });
   h += `<section><div class="sec-h"><h2>Competitions</h2></div>`;
-  h += comps.length ? `<div class="stats">${tile("Played", comps.length)}${tile("Won", won.length ? `${won.length} <span class="ms trophy" aria-hidden="true">trophy</span>` : 0)}</div>` : `<div class="empty">No competitions yet.</div>`;
+  h += comps.length ? `<div class="stats">${tile("Played", comps.length, "calendar_month")}${tile(won.length === 1 ? "Title" : "Titles", won.length, "trophy", won.length > 0)}</div>` : `<div class="empty">No competitions yet.</div>`;
   h += `</section>${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
   app.innerHTML = h; wire();
 }

@@ -175,12 +175,14 @@ td.w{font-weight:700}
 .fire{font-size:16px;width:16px;height:16px;line-height:16px;color:#ff8a3d;font-variation-settings:"FILL" 1;margin-left:3px;vertical-align:-2px}
 tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color:var(--on-surface-var);background:var(--surface)}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.stat{background:var(--surface-1);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
-.stat small{font-size:12px;color:var(--on-surface-var)}
-.stat b{font-size:22px;font-weight:600;line-height:30px;display:flex;align-items:center;gap:4px;min-height:30px}
-.stat span{font-size:11px;color:var(--on-surface-var)}
-.stat .form{padding:0}
-.stat .trophy{font-size:20px}
+/* Stat boxes: icon top left, big stat bottom left with its label underneath */
+.stat{background:var(--surface-1);border-radius:16px;padding:12px 14px 14px;display:flex;flex-direction:column;min-width:0;min-height:112px}
+.stat > .ms{font-size:20px;width:20px;height:20px;line-height:20px;color:var(--ball);font-variation-settings:"FILL" 1;margin-bottom:auto}
+.stat b{font-size:26px;font-weight:700;line-height:32px;margin-top:12px;min-height:32px;display:flex;align-items:center}
+.stat small{font-size:12px;line-height:16px;color:var(--on-surface-var);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .form{padding:0;gap:4px}
+.stat.hot{background:var(--ball);border-color:var(--ball);color:var(--on-ball)}
+.stat.hot > .ms,.stat.hot small{color:var(--on-ball)}
 .dim{color:var(--outline);font-weight:400}
 .hls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:8px}
 .hl{background:var(--surface-1);border-radius:16px;padding:12px 16px;display:flex;gap:12px;align-items:center}
