@@ -932,22 +932,18 @@ function renderLeague() {
 }
 
 // ----- Player profile -----
-// Head-to-head panel: the player on the left, their opponents on the right.
-// Shared totals get a percentage, the count and a bar on each side.
-function versusPanel(name, r) {
-  const pctOf = (x, t) => t ? Math.round(x / t * 100) + "%" : "–";
-  const side = (cls, big, small, w) => `<div class="vs-${cls}"><b class="num">${big}</b>${small != null ? `<small class="num">${small}</small>` : ""}</div>`;
-  const row = (title, mine, theirs, bars = true) => {
-    const t = mine + theirs;
-    const pct = bars ? [pctOf(mine, t), pctOf(theirs, t)] : [mine, theirs];
-    let h = `<div class="vs-row${bars ? "" : " plain"}">${side("l", pct[0], bars ? `${mine}/${t}` : null)}<div class="vs-t">${title}</div>${side("r", pct[1], bars ? `${theirs}/${t}` : null)}</div>`;
-    if (bars) h += `<div class="vs-bars" aria-hidden="true"><div class="vs-bar l"><span style="width:${t ? mine / t * 100 : 0}%"></span></div><div class="vs-bar r"><span style="width:${t ? theirs / t * 100 : 0}%"></span></div></div>`;
-    return h;
+// Record panel: one row per stat. Shared totals ("7 of 8") get a single
+// full-width bar filled to the share won; streaks and bagels are plain numbers.
+function recordPanel(r) {
+  const bar = (title, won, total) => {
+    const pc = total ? Math.round(won / total * 100) : 0;
+    return `<div class="rp-row"><div class="rp-top"><span class="rp-t">${title}</span><span class="rp-v"><b class="num">${won}</b> of ${total}<small class="num">${total ? pc + "%" : "–"}</small></span></div>`
+      + `<div class="rp-bar" role="img" aria-label="${won} of ${total}"><span style="width:${pc}%"></span></div></div>`;
   };
-  let h = `<div class="vs card"><div class="vs-head"><span>${esc(name)}</span><span>Opponents</span></div>`;
-  h += row("Matches won", r.W, r.L) + row("Sets won", r.SW, r.SL) + row("Games won", r.GW, r.GL);
-  if (r.tbW + r.tbL) h += row("Tiebreaks won", r.tbW, r.tbL);
-  h += row("Longest win streak", r.best, r.bestL, false) + row("Bagels served", r.bagS, r.bagE, false);
+  const plain = (title, value) => `<div class="rp-row"><div class="rp-top"><span class="rp-t">${title}</span><span class="rp-v"><b class="num">${value}</b></span></div></div>`;
+  let h = `<div class="rp card">` + bar("Matches won", r.W, r.P) + bar("Sets won", r.SW, r.SW + r.SL) + bar("Games won", r.GW, r.GW + r.GL);
+  if (r.tbW + r.tbL) h += bar("Tiebreaks won", r.tbW, r.tbW + r.tbL);
+  h += plain("Longest win streak", r.best) + plain("Bagels served", r.bagS) + plain("Bagels eaten", r.bagE);
   return h + `</div>`;
 }
 function renderPlayer(id) {
@@ -969,7 +965,7 @@ function renderPlayer(id) {
       + tile("Streak", r.cur ? `${r.cur}W${r.cur >= FIRE_STREAK ? ` <span class="ms fire" aria-hidden="true">local_fire_department</span>` : ""}` : (r.form.length ? "–" : "0"), r.cur ? "wins in a row" : "")
       + tile("Form", `<div class="form">${formDots(r.form)}</div>`)
       + `</div>`;
-    h += versusPanel(name, r);
+    h += recordPanel(r);
     // Partner and rival highlights
     const partners = Object.entries(r.partners).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || pname(a).localeCompare(pname(b)));
     const opps = Object.entries(r.opps).sort(([a, x], [b, y]) => y.P - x.P || y.L - x.L || pname(a).localeCompare(pname(b)));

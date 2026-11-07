@@ -259,20 +259,14 @@ table tr > th:first-child,table tr > td:first-child{padding-left:16px}
 table tr > th:last-child,table tr > td:last-child{padding-right:16px}
 table tr.sep > td{padding-left:16px;padding-right:16px}
 
-/* Profile head-to-head panel: player left (bright), opponents right (grey) */
-.vs{padding:16px;display:flex;flex-direction:column;margin-top:8px}
-.vs-head{display:flex;justify-content:space-between;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--on-surface-var);padding-bottom:12px}
-.vs-row{display:grid;grid-template-columns:minmax(64px,1fr) auto minmax(64px,1fr);align-items:center;gap:8px}
-.vs-row + .vs-row,.vs-bars + .vs-row{margin-top:14px}
-.vs-l b,.vs-r b{display:block;font-size:22px;font-weight:700;line-height:28px}
-.vs-l small,.vs-r small{display:block;font-size:13px;line-height:18px}
-.vs-l{color:var(--on-surface)}
-.vs-r{text-align:right;color:var(--on-surface-var)}
-.vs-r b{font-weight:600}
-.vs-t{text-align:center;font-size:14px;color:var(--on-surface)}
-.vs-bars{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:8px}
-.vs-bar{height:4px;border-radius:2px;background:var(--surface-3);display:flex;overflow:hidden}
-.vs-bar span{display:block;height:100%;border-radius:2px}
-.vs-bar.l span{background:var(--primary)}
-.vs-bar.r{justify-content:flex-end}
-.vs-bar.r span{background:var(--outline)}
+/* Profile record panel: label and "7 of 8" on one line, one bar underneath */
+.rp{padding:4px 16px;display:flex;flex-direction:column;margin-top:8px}
+.rp-row{padding:12px 0}
+.rp-row + .rp-row{border-top:0}
+.rp-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.rp-t{font-size:14px;color:var(--on-surface-var)}
+.rp-v{font-size:14px;color:var(--on-surface-var);white-space:nowrap}
+.rp-v b{font-size:20px;font-weight:700;color:var(--on-surface);margin-right:2px}
+.rp-v small{font-size:13px;margin-left:8px;color:var(--on-surface);font-weight:600}
+.rp-bar{height:6px;border-radius:3px;background:var(--surface-3);margin-top:8px;overflow:hidden}
+.rp-bar span{display:block;height:100%;border-radius:3px;background:var(--primary)}
