@@ -63,7 +63,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const pname = id => (id && S.players[id]?.name) || "";
 const played = m => m.sa !== null && m.sb !== null && m.sa !== undefined && m.sb !== undefined && m.sa !== "" && m.sb !== "";
 const playersOf = t => [pname(t.p1), pname(t.p2)].filter(Boolean).join(" & ");
-const teamName = t => (t?.name || "").trim() || playersOf(t) || ("Team " + String(t?.id || "").replace(/\D/g, ""));
+const teamName = t => playersOf(t) || ("Team " + String(t?.id || "").replace(/\D/g, ""));
 const teamById = (c, id) => c.teams.find(t => t.id === id) || { name: "?" };
 const roundsOf = c => c.matches.reduce((mx, m) => Math.max(mx, m.round), 0);
 const courtCount = c => Math.floor(c.teams.length / 2);
@@ -318,8 +318,7 @@ function matchRows(c, m) {
   const A = teamById(c, m.a), B = teamById(c, m.b), done = played(m), sa = +m.sa, sb = +m.sb;
   const row = (t, sc, o, first) => {
     const cls = [first ? "m1" : "m2", !done ? "" : sc > o ? "won" : sc < o ? "lost" : ""].filter(Boolean).join(" ");
-    const pl = (t.name || "").trim() ? playersOf(t) : "";
-    return `<tr class="${cls}">${first ? `<td class="fx-court" rowspan="2"><small>Court</small><b class="num">${m.court}</b></td>` : ""}<td class="l fx-team"><span class="nm">${esc(teamName(t))}${crown(t)}${pl ? `<small>${esc(pl)}</small>` : ""}</span></td><td class="fx-sc num">${done ? sc : ""}</td></tr>`;
+    return `<tr class="${cls}">${first ? `<td class="fx-court" rowspan="2"><small>Court</small><b class="num">${m.court}</b></td>` : ""}<td class="l fx-team"><span class="nm">${esc(teamName(t))}${crown(t)}</span></td><td class="fx-sc num">${done ? sc : ""}</td></tr>`;
   };
   return row(A, sa, sb, true) + row(B, sb, sa, false);
 }
@@ -342,10 +341,9 @@ function renderComp(id) {
 
   h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th class="l">Form</th></tr></thead><tbody>`;
   st.forEach((r, i) => {
-    const pl = (r.t.name || "").trim() ? playersOf(r.t) : "";
     const form = r.form.length ? r.form.slice(-5).map(f => { const lab = { W: "Win", L: "Loss", D: "Draw" }[f] || f; return `<span class="fchip f${f}" role="img" aria-label="${lab}" title="${lab}"></span>`; }).join("") : `<span class="fnone">–</span>`;
     const champ = i === 0 && status(c) === "done";
-    h += `<tr${champ ? ' class="champ"' : i === 0 && playedCount ? ' class="lead"' : ""}><td class="pos num">${champ ? '<span class="ms trophy" aria-label="Winners" title="Winners">trophy</span>' : i + 1}</td><td class="team l"><span class="tname">${esc(teamName(r.t))}</span>${crown(r.t)}${pl ? `<span class="tplayers">${esc(pl)}</span>` : ""}</td><td>${r.P}</td><td class="w">${r.W}</td>${anyDraw ? `<td>${r.D}</td>` : ""}<td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td class="l"><div class="form">${form}</div></td></tr>`;
+    h += `<tr${champ ? ' class="champ"' : i === 0 && playedCount ? ' class="lead"' : ""}><td class="pos num">${champ ? '<span class="ms trophy" aria-label="Winners" title="Winners">trophy</span>' : i + 1}</td><td class="team l"><span class="tname">${esc(teamName(r.t))}</span>${crown(r.t)}</td><td>${r.P}</td><td class="w">${r.W}</td>${anyDraw ? `<td>${r.D}</td>` : ""}<td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td class="l"><div class="form">${form}</div></td></tr>`;
   });
   h += `</tbody></table></div></div></section>`;
 
@@ -512,17 +510,16 @@ function renderEditComp(id) {
   d.teams.forEach((t, i) => {
     h += `<div class="team-ed"><h4>Team ${i + 1}${playersOf(t) ? " · " + esc(playersOf(t)) : ""}${defIds.has(t.id) ? " " + crown(t) + " Defending champions" : ""}</h4>
       <div class="row"><div class="field"><label for="p1-${t.id}">Player 1</label>${playerSelect("p1-" + t.id, t.p1)}</div>
-      <div class="field"><label for="p2-${t.id}">Player 2</label>${playerSelect("p2-" + t.id, t.p2)}</div></div>
-      <div class="field"><label for="tn-${t.id}">Team name (optional)</label><input id="tn-${t.id}" data-t="${t.id}" value="${esc(t.name)}" placeholder="Uses player names if empty" autocomplete="off"></div></div>`;
+      <div class="field"><label for="p2-${t.id}">Player 2</label>${playerSelect("p2-" + t.id, t.p2)}</div></div></div>`;
   });
   const champKey = prevWinnersKey(d, id), picked = d.teams.flatMap(t => [t.p1, t.p2]);
   const champsIn = champKey && champKey.split("|").every(p => picked.includes(p));
-  h += `<div class="shuffle-box"><p class="hint">Pick all ${n * 2} players in any order, then shuffle for random partners and team numbers. Not happy? Shuffle again.</p>`;
-  if (champsIn) h += `<label class="check"><input type="checkbox" id="keepch"${S.keepChamps ? " checked" : ""}><span>Keep defending champions <b>${esc(champKey.split("|").map(pname).join(" & "))}</b> together</span></label>`;
-  h += S.pending?.type === "shuffle"
-    ? `<div class="confirm"><p>Shuffle the teams? This clears the ${scored} scores entered.</p><div class="row"><button class="btn danger" id="cf-yes">Shuffle and clear scores</button><button class="btn text" id="cf-no">Cancel</button></div></div>`
-    : `<button class="btn filled" id="shuffle" style="align-self:flex-start"><span class="ms">shuffle</span>Shuffle teams</button>`;
-  h += `</div>`;
+  if (scored) h += `<div class="shuffle-box"><p class="hint"><span class="ms lock" aria-hidden="true">lock</span>Teams are locked for shuffling because scores have been entered. Clear every score to shuffle again.</p></div>`;
+  else {
+    h += `<div class="shuffle-box"><p class="hint">Pick all ${n * 2} players in any order, then shuffle for random partners and team numbers. Not happy? Shuffle again.</p>`;
+    if (champsIn) h += `<label class="check"><input type="checkbox" id="keepch"${S.keepChamps ? " checked" : ""}><span>Keep defending champions <b>${esc(champKey.split("|").map(pname).join(" & "))}</b> together</span></label>`;
+    h += `<button class="btn filled" id="shuffle" style="align-self:flex-start"><span class="ms">shuffle</span>Shuffle teams</button></div>`;
+  }
   h += `<p class="hint">Number teams as on the whiteboard. Swap a player if someone drops out; fixtures and scores stay as they are.</p>`;
   h += S.pending?.type === "rebuild"
     ? `<div class="confirm"><p>Rebuild every fixture in the club order? This clears the ${scored} scores entered.</p><div class="row"><button class="btn danger" id="cf-yes">Rebuild and clear scores</button><button class="btn text" id="cf-no">Cancel</button></div></div>`
@@ -559,7 +556,6 @@ function renderEditComp(id) {
     inp.oninput = () => { const k = inp.dataset.d; d[k] = (k === "gameMins" || k === "breakMins") ? (parseInt(inp.value, 10) || 0) : inp.value; markDirty(); };
     if (["start", "gameMins", "breakMins"].includes(inp.dataset.d)) inp.onchange = () => renderEditComp(id);
   });
-  app.querySelectorAll("input[data-t]").forEach(inp => inp.oninput = () => { d.teams.find(t => t.id === inp.dataset.t).name = inp.value; markDirty(); });
   d.teams.forEach(t => ["p1", "p2"].forEach(k => {
     document.getElementById(`${k}-${t.id}`).onchange = e => { t[k] = e.target.value; markDirty(); renderEditComp(id); };
   }));
@@ -583,25 +579,16 @@ function renderEditComp(id) {
     if (d.matches.some(played)) { S.pending = { type: "rebuild" }; renderEditComp(id); return; }
     d.matches = buildMatches(d.teams); S.dirty = true; S.notice = { t: "Fixtures rebuilt in the club order. Tap Save to keep them." }; renderEditComp(id);
   };
-  const doShuffle = () => {
-    const err = shuffleTeams(d, champsIn && S.keepChamps ? champKey : "");
-    S.pending = null;
-    if (err) { S.notice = { err: true, t: err }; renderEditComp(id); return false; }
-    S.dirty = true; S.notice = { t: "Teams shuffled. Tap Save to keep them." }; renderEditComp(id); return true;
-  };
   const kc = document.getElementById("keepch"); if (kc) kc.onchange = () => { S.keepChamps = kc.checked; };
   const sh = document.getElementById("shuffle"); if (sh) sh.onclick = () => {
-    if (d.matches.some(played)) {
-      const err = shuffleTeams(clone(d), "");
-      if (err) { S.notice = { err: true, t: err }; renderEditComp(id); return; }
-      S.pending = { type: "shuffle" }; renderEditComp(id); return;
-    }
-    doShuffle();
+    if (d.matches.some(played)) { renderEditComp(id); return; }
+    const err = shuffleTeams(d, champsIn && S.keepChamps ? champKey : "");
+    if (err) { S.notice = { err: true, t: err }; renderEditComp(id); return; }
+    S.dirty = true; S.notice = { t: "Teams shuffled. Tap Save to keep them." }; renderEditComp(id);
   };
   const del = document.getElementById("del"); if (del) del.onclick = () => { S.pending = { type: "delete" }; renderEditComp(id); };
   const yes = document.getElementById("cf-yes"); if (yes) yes.onclick = async () => {
     if (S.pending.type === "count") { setTeamCount(S.pending.n); renderEditComp(id); }
-    else if (S.pending.type === "shuffle") { const keep = d.matches.map(m => [m.sa, m.sb]); d.matches.forEach(m => { m.sa = null; m.sb = null; }); if (!doShuffle()) d.matches.forEach((m, i) => { [m.sa, m.sb] = keep[i]; }); }
     else if (S.pending.type === "rebuild") { d.matches = buildMatches(d.teams); S.pending = null; S.dirty = true; S.notice = { t: "Fixtures rebuilt in the club order. Tap Save to keep them." }; renderEditComp(id); }
     else if (S.pending.type === "delete") {
       try { await deleteDoc(doc(db, "comps", id)); S.dirty = false; go("#/admin"); }
@@ -627,7 +614,6 @@ function shuffleTeams(d, keepKey) {
   if (all.some(p => !p)) return "Pick every player first, then shuffle.";
   if (new Set(all).size !== all.length) return "Someone is picked twice. Fix that, then shuffle.";
   const keep = keepKey ? keepKey.split("|") : [];
-  const keptName = keep.length ? d.teams.find(t => pairKey(t) === keepKey)?.name || "" : "";
   const sig = list => list.map(x => x.slice().sort().join("|")).sort().join(",");
   const before = sig(d.teams.map(t => [t.p1, t.p2]));
   let pairs;
@@ -635,12 +621,12 @@ function shuffleTeams(d, keepKey) {
   for (let tries = 0; tries < 30; tries++) {
     const rest = shuffle(all.filter(p => !keep.includes(p)));
     pairs = [];
-    for (let i = 0; i < rest.length; i += 2) pairs.push({ p: [rest[i], rest[i + 1]], name: "" });
-    if (keep.length) pairs.push({ p: keep, name: keptName });
+    for (let i = 0; i < rest.length; i += 2) pairs.push({ p: [rest[i], rest[i + 1]] });
+    if (keep.length) pairs.push({ p: keep });
     if (sig(pairs.map(x => x.p)) !== before) break;
   }
   shuffle(pairs);
-  d.teams.forEach((t, i) => { t.p1 = pairs[i].p[0]; t.p2 = pairs[i].p[1]; t.name = pairs[i].name; });
+  d.teams.forEach((t, i) => { t.p1 = pairs[i].p[0]; t.p2 = pairs[i].p[1]; });
   return null;
 }
 function setTeamCount(n) {

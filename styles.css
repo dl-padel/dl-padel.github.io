@@ -83,13 +83,11 @@ td{text-align:center;padding:10px 6px;line-height:24px;border-top:1px solid var(
 td.pos{width:28px;padding-left:14px;color:var(--on-surface-var);font-weight:500}
 tr.lead td.pos{color:var(--primary)}
 tr.champ td{background:var(--champ-row);color:var(--on-champ-row);border-top-color:transparent}
-tr.champ .tplayers{color:inherit;opacity:.8}
 .crown{font-size:12px;width:12px;height:12px;line-height:12px;color:var(--gold);font-variation-settings:"FILL" 1;margin-left:3px;vertical-align:6px}
 .trophy{font-size:20px;width:20px;color:var(--gold);font-variation-settings:"FILL" 1;vertical-align:-4px}
 tr.champ .trophy,tr.champ .crown{color:var(--ball)}
 td.team{min-width:130px}
 .tname{font-weight:400}
-.tplayers{display:block;font-size:12px;color:var(--on-surface-var)}
 td.w{font-weight:700}
 .form{display:flex;gap:5px;align-items:center;justify-content:flex-start;padding-right:8px}
 .fchip{width:12px;height:12px;border-radius:50%;flex:none}
@@ -113,7 +111,6 @@ table.fx td.fx-court{color:var(--primary);line-height:1.1}
 .fx-court small{display:block;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .fx-court b{display:block;font-size:18px;font-weight:700;margin-top:2px}
 .fx-team .nm{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fx-team .nm small{color:var(--on-surface-var);font-size:12px;margin-left:6px}
 .fx-sc{font-weight:400}
 table.fx tr.won .nm,table.fx tr.won .fx-sc{font-weight:600}
 table.fx tr.won .fx-sc{color:var(--ball)}
@@ -139,6 +136,7 @@ table.fx tr.lost td.fx-team,table.fx tr.lost td.fx-sc{color:var(--on-surface-var
 .row .field{flex:1 1 120px}
 .team-ed{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:var(--surface)}
 .shuffle-box{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;background:var(--surface)}
+.shuffle-box .lock{font-size:16px;width:16px;vertical-align:-3px;margin-right:6px}
 .check{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;min-height:40px}
 .check input{width:20px;height:20px;margin:0;accent-color:var(--ball);flex:none}
 .team-ed h4{margin:0;font-size:13px;font-weight:600;color:var(--on-surface-var)}

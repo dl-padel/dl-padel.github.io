@@ -9,7 +9,7 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 
 ## Data (Firestore)
 - `players/{autoId}` → `{ name }`. Shared list so stats add up across comps.
-- `comps/{slug}` → `{ name, date "YYYY-MM-DD", start "HH:MM", gameMins, breakMins, teams[{id:"t1", name, p1, p2}], matches[{id, round, court, a, b, sa, sb}] }`. `sa`/`sb` null = not played.
+- `comps/{slug}` → `{ name, date "YYYY-MM-DD", start "HH:MM", gameMins, breakMins, teams[{id:"t1", name, p1, p2}] (team `name` is unused: teams always show as "P1 & P2", there's no team name box), matches[{id, round, court, a, b, sa, sb}] }`. `sa`/`sb` null = not played.
 - `admins/{lowercase email}` → any field. Added by hand in the Firebase console. Rules in `firestore.rules` (public read; writes need an admin with a verified email). Rules must be pasted into the console manually.
 
 ## Competition rules
@@ -34,7 +34,7 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 
 ## Admin
 - `#/admin`: Google sign-in only (on iPhone use Safari; Chrome's pop-up fails). Add or rename players, list and create comps.
-- `#/admin/c/{id}`: details, 4/6 team switch (rebuilds fixtures and clears scores after confirming), player dropdowns per team, Shuffle teams (random partners and team numbers from the players picked; a ticked-by-default box keeps the defending champions paired, shown only when both are picked; asks to clear scores if any), Rebuild fixtures (club order), score entry, delete. Save writes the whole comp doc; viewers update live.
+- `#/admin/c/{id}`: details, 4/6 team switch (rebuilds fixtures and clears scores after confirming), player dropdowns per team, Shuffle teams (random partners and team numbers from the players picked; a ticked-by-default box keeps the defending champions paired, shown only when both are picked; locked once any score is entered, no separate Start button), Rebuild fixtures (club order), score entry, delete. Save writes the whole comp doc; viewers update live.
 - `PAST_IMPORTS` in app.js is a one-off import button for September 2026; it hides once that comp exists.
 
 ## Working notes
