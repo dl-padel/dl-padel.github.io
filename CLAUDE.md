@@ -34,7 +34,7 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 
 ## Admin
 - `#/admin`: Google sign-in only (on iPhone use Safari; Chrome's pop-up fails). Add or rename players, list and create comps.
-- `#/admin/c/{id}`: details, 4/6 team switch (rebuilds fixtures and clears scores after confirming), player dropdowns per team, Rebuild fixtures (club order), score entry, delete. Save writes the whole comp doc; viewers update live.
+- `#/admin/c/{id}`: details, 4/6 team switch (rebuilds fixtures and clears scores after confirming), player dropdowns per team, Shuffle teams (random partners and team numbers from the players picked; a ticked-by-default box keeps the defending champions paired, shown only when both are picked; asks to clear scores if any), Rebuild fixtures (club order), score entry, delete. Save writes the whole comp doc; viewers update live.
 - `PAST_IMPORTS` in app.js is a one-off import button for September 2026; it hides once that comp exists.
 
 ## Working notes

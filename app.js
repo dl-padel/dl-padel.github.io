@@ -24,6 +24,7 @@ const S = {
   players: {}, comps: {}, playersReady: false, compsReady: false, loadError: null,
   user: null, isAdmin: false, authReady: false,
   draft: null, draftId: null, dirty: false, pending: null, notice: null, saving: false,
+  keepChamps: true,
 };
 
 onSnapshot(collection(db, "players"), snap => {
@@ -295,17 +296,20 @@ function renderHome() {
 // Defending champions: a team with the same two players as the winners of
 // the most recent finished competition dated before this one.
 let DEFENDING = new Set();
-function defendingTeamIds(c, selfId) {
-  if (!c) return new Set();
+const pairKey = t => [t.p1, t.p2].filter(Boolean).sort().join("|");
+// The two players who won that competition, as "id1|id2", or "".
+function prevWinnersKey(c, selfId) {
+  if (!c) return "";
   const prev = Object.entries(S.comps)
     .filter(([k, x]) => k !== selfId && x.date && status(x) === "done" && (!c.date || x.date < c.date))
     .sort(([, a], [, b]) => b.date.localeCompare(a.date))[0];
-  if (!prev) return new Set();
-  const top = standings(prev[1])[0];
-  const key = t => [t.p1, t.p2].filter(Boolean).sort().join("|");
-  const wk = top ? key(top.t) : "";
-  if (!wk.includes("|")) return new Set();
-  return new Set(c.teams.filter(t => key(t) === wk).map(t => t.id));
+  const top = prev && standings(prev[1])[0];
+  const wk = top ? pairKey(top.t) : "";
+  return wk.includes("|") ? wk : "";
+}
+function defendingTeamIds(c, selfId) {
+  const wk = prevWinnersKey(c, selfId);
+  return new Set(wk ? c.teams.filter(t => pairKey(t) === wk).map(t => t.id) : []);
 }
 const crown = t => DEFENDING.has(t.id) ? '<span class="ms crown" role="img" aria-label="Defending champions" title="Defending champions">crown</span>' : "";
 
@@ -511,6 +515,14 @@ function renderEditComp(id) {
       <div class="field"><label for="p2-${t.id}">Player 2</label>${playerSelect("p2-" + t.id, t.p2)}</div></div>
       <div class="field"><label for="tn-${t.id}">Team name (optional)</label><input id="tn-${t.id}" data-t="${t.id}" value="${esc(t.name)}" placeholder="Uses player names if empty" autocomplete="off"></div></div>`;
   });
+  const champKey = prevWinnersKey(d, id), picked = d.teams.flatMap(t => [t.p1, t.p2]);
+  const champsIn = champKey && champKey.split("|").every(p => picked.includes(p));
+  h += `<div class="shuffle-box"><p class="hint">Pick all ${n * 2} players in any order, then shuffle for random partners and team numbers. Not happy? Shuffle again.</p>`;
+  if (champsIn) h += `<label class="check"><input type="checkbox" id="keepch"${S.keepChamps ? " checked" : ""}><span>Keep defending champions <b>${esc(champKey.split("|").map(pname).join(" & "))}</b> together</span></label>`;
+  h += S.pending?.type === "shuffle"
+    ? `<div class="confirm"><p>Shuffle the teams? This clears the ${scored} scores entered.</p><div class="row"><button class="btn danger" id="cf-yes">Shuffle and clear scores</button><button class="btn text" id="cf-no">Cancel</button></div></div>`
+    : `<button class="btn filled" id="shuffle" style="align-self:flex-start"><span class="ms">shuffle</span>Shuffle teams</button>`;
+  h += `</div>`;
   h += `<p class="hint">Number teams as on the whiteboard. Swap a player if someone drops out; fixtures and scores stay as they are.</p>`;
   h += S.pending?.type === "rebuild"
     ? `<div class="confirm"><p>Rebuild every fixture in the club order? This clears the ${scored} scores entered.</p><div class="row"><button class="btn danger" id="cf-yes">Rebuild and clear scores</button><button class="btn text" id="cf-no">Cancel</button></div></div>`
@@ -571,9 +583,25 @@ function renderEditComp(id) {
     if (d.matches.some(played)) { S.pending = { type: "rebuild" }; renderEditComp(id); return; }
     d.matches = buildMatches(d.teams); S.dirty = true; S.notice = { t: "Fixtures rebuilt in the club order. Tap Save to keep them." }; renderEditComp(id);
   };
+  const doShuffle = () => {
+    const err = shuffleTeams(d, champsIn && S.keepChamps ? champKey : "");
+    S.pending = null;
+    if (err) { S.notice = { err: true, t: err }; renderEditComp(id); return false; }
+    S.dirty = true; S.notice = { t: "Teams shuffled. Tap Save to keep them." }; renderEditComp(id); return true;
+  };
+  const kc = document.getElementById("keepch"); if (kc) kc.onchange = () => { S.keepChamps = kc.checked; };
+  const sh = document.getElementById("shuffle"); if (sh) sh.onclick = () => {
+    if (d.matches.some(played)) {
+      const err = shuffleTeams(clone(d), "");
+      if (err) { S.notice = { err: true, t: err }; renderEditComp(id); return; }
+      S.pending = { type: "shuffle" }; renderEditComp(id); return;
+    }
+    doShuffle();
+  };
   const del = document.getElementById("del"); if (del) del.onclick = () => { S.pending = { type: "delete" }; renderEditComp(id); };
   const yes = document.getElementById("cf-yes"); if (yes) yes.onclick = async () => {
     if (S.pending.type === "count") { setTeamCount(S.pending.n); renderEditComp(id); }
+    else if (S.pending.type === "shuffle") { const keep = d.matches.map(m => [m.sa, m.sb]); d.matches.forEach(m => { m.sa = null; m.sb = null; }); if (!doShuffle()) d.matches.forEach((m, i) => { [m.sa, m.sb] = keep[i]; }); }
     else if (S.pending.type === "rebuild") { d.matches = buildMatches(d.teams); S.pending = null; S.dirty = true; S.notice = { t: "Fixtures rebuilt in the club order. Tap Save to keep them." }; renderEditComp(id); }
     else if (S.pending.type === "delete") {
       try { await deleteDoc(doc(db, "comps", id)); S.dirty = false; go("#/admin"); }
@@ -587,6 +615,33 @@ function renderEditComp(id) {
   };
   document.getElementById("save").onclick = () => save(id);
   updateSaveBar();
+}
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+// Random pairs and team numbers from the players already picked. keepKey
+// ("id1|id2") keeps those two together. Returns an error message or null.
+function shuffleTeams(d, keepKey) {
+  const all = d.teams.flatMap(t => [t.p1, t.p2]);
+  if (all.some(p => !p)) return "Pick every player first, then shuffle.";
+  if (new Set(all).size !== all.length) return "Someone is picked twice. Fix that, then shuffle.";
+  const keep = keepKey ? keepKey.split("|") : [];
+  const keptName = keep.length ? d.teams.find(t => pairKey(t) === keepKey)?.name || "" : "";
+  const sig = list => list.map(x => x.slice().sort().join("|")).sort().join(",");
+  const before = sig(d.teams.map(t => [t.p1, t.p2]));
+  let pairs;
+  // Try for different partners than before (not always possible).
+  for (let tries = 0; tries < 30; tries++) {
+    const rest = shuffle(all.filter(p => !keep.includes(p)));
+    pairs = [];
+    for (let i = 0; i < rest.length; i += 2) pairs.push({ p: [rest[i], rest[i + 1]], name: "" });
+    if (keep.length) pairs.push({ p: keep, name: keptName });
+    if (sig(pairs.map(x => x.p)) !== before) break;
+  }
+  shuffle(pairs);
+  d.teams.forEach((t, i) => { t.p1 = pairs[i].p[0]; t.p2 = pairs[i].p[1]; t.name = pairs[i].name; });
+  return null;
 }
 function setTeamCount(n) {
   const d = S.draft, t = d.teams.slice(0, n);
