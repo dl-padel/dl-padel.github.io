@@ -746,13 +746,14 @@ function matchScore(m) {
   return { sa, sb, ga, gb, aWon: sa > sb };
 }
 const isBagel = (mine, theirs) => +mine === 0 && +theirs === 6;
-function blankRow(extra) { return { P: 0, W: 0, L: 0, SW: 0, SL: 0, GW: 0, GL: 0, form: [], cur: 0, best: 0, bagS: 0, bagE: 0, ...extra }; }
+function blankRow(extra) { return { P: 0, W: 0, L: 0, SW: 0, SL: 0, GW: 0, GL: 0, form: [], cur: 0, best: 0, curL: 0, bestL: 0, tbW: 0, tbL: 0, bagS: 0, bagE: 0, ...extra }; }
 function addResult(r, won, s, side) {
   const mySets = side === "a" ? s.sa : s.sb, theirSets = side === "a" ? s.sb : s.sa;
   const myGames = side === "a" ? s.ga : s.gb, theirGames = side === "a" ? s.gb : s.ga;
   r.P++; won ? r.W++ : r.L++; r.SW += mySets; r.SL += theirSets; r.GW += myGames; r.GL += theirGames;
   r.form.push(won ? "W" : "L");
   r.cur = won ? r.cur + 1 : 0; r.best = Math.max(r.best, r.cur);
+  r.curL = won ? 0 : r.curL + 1; r.bestL = Math.max(r.bestL, r.curL);
 }
 // Everything the league pages show, worked out from the full match list.
 function leagueStats() {
@@ -766,6 +767,7 @@ function leagueStats() {
       const bagE = m.sets.filter(st => side === "a" ? isBagel(st.a, st.b) : isBagel(st.b, st.a)).length;
       mine.forEach((id, i) => {
         const r = P(id); addResult(r, won, s, side); r.bagS += bagS; r.bagE += bagE;
+        m.sets.forEach(st => { if (st.ta == null || st.tb == null) return; (side === "a" ? st.ta > st.tb : st.tb > st.ta) ? r.tbW++ : r.tbL++; });
         const mate = mine[1 - i], pt = r.partners[mate] ||= { P: 0, W: 0 };
         pt.P++; if (won) pt.W++;
         theirs.forEach(o => { const op = r.opps[o] ||= { P: 0, W: 0, L: 0 }; op.P++; won ? op.W++ : op.L++; });
@@ -930,6 +932,24 @@ function renderLeague() {
 }
 
 // ----- Player profile -----
+// Head-to-head panel: the player on the left, their opponents on the right.
+// Shared totals get a percentage, the count and a bar on each side.
+function versusPanel(name, r) {
+  const pctOf = (x, t) => t ? Math.round(x / t * 100) + "%" : "–";
+  const side = (cls, big, small, w) => `<div class="vs-${cls}"><b class="num">${big}</b>${small != null ? `<small class="num">${small}</small>` : ""}</div>`;
+  const row = (title, mine, theirs, bars = true) => {
+    const t = mine + theirs;
+    const pct = bars ? [pctOf(mine, t), pctOf(theirs, t)] : [mine, theirs];
+    let h = `<div class="vs-row${bars ? "" : " plain"}">${side("l", pct[0], bars ? `${mine}/${t}` : null)}<div class="vs-t">${title}</div>${side("r", pct[1], bars ? `${theirs}/${t}` : null)}</div>`;
+    if (bars) h += `<div class="vs-bars" aria-hidden="true"><div class="vs-bar l"><span style="width:${t ? mine / t * 100 : 0}%"></span></div><div class="vs-bar r"><span style="width:${t ? theirs / t * 100 : 0}%"></span></div></div>`;
+    return h;
+  };
+  let h = `<div class="vs card"><div class="vs-head"><span>${esc(name)}</span><span>Opponents</span></div>`;
+  h += row("Matches won", r.W, r.L) + row("Sets won", r.SW, r.SL) + row("Games won", r.GW, r.GL);
+  if (r.tbW + r.tbL) h += row("Tiebreaks won", r.tbW, r.tbL);
+  h += row("Longest win streak", r.best, r.bestL, false) + row("Bagels served", r.bagS, r.bagE, false);
+  return h + `</div>`;
+}
 function renderPlayer(id) {
   const name = pname(id);
   document.title = `${name || "Player"} · ${SITE}`;
@@ -945,11 +965,11 @@ function renderPlayer(id) {
   if (!r) h += `<div class="empty">No league matches yet.</div>`;
   else {
     h += `<div class="stats">`
-      + tile("Played", r.P) + tile("Won", r.W) + tile("Win rate", pctText(r))
+      + tile("Played", r.P)
       + tile("Streak", r.cur ? `${r.cur}W${r.cur >= FIRE_STREAK ? ` <span class="ms fire" aria-hidden="true">local_fire_department</span>` : ""}` : (r.form.length ? "–" : "0"), r.cur ? "wins in a row" : "")
-      + tile("Best streak", r.best, "wins in a row") + tile("Form", `<div class="form">${formDots(r.form)}</div>`)
-      + tile("Sets", `${r.SW}–${r.SL}`) + tile("Games", `${r.GW}–${r.GL}`) + tile("Bagels", `${r.bagS} <span class="dim">/</span> ${r.bagE}`, "served / eaten")
+      + tile("Form", `<div class="form">${formDots(r.form)}</div>`)
       + `</div>`;
+    h += versusPanel(name, r);
     // Partner and rival highlights
     const partners = Object.entries(r.partners).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || pname(a).localeCompare(pname(b)));
     const opps = Object.entries(r.opps).sort(([a, x], [b, y]) => y.P - x.P || y.L - x.L || pname(a).localeCompare(pname(b)));
