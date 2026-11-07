@@ -181,16 +181,21 @@ tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color
 .stat b{font-size:26px;font-weight:700;line-height:32px;margin-top:12px;min-height:32px;display:flex;align-items:center}
 .stat small{font-size:12px;line-height:16px;color:var(--on-surface-var);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat .form{padding:0;gap:4px}
+.stats.two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}
+.stat b .plink{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat b{min-width:0}
+.stat .sub{font-size:12px;line-height:16px;color:var(--on-surface-var);opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat.hot .sub{color:var(--on-ball);opacity:.8}
+/* Profile hero: big name, form, rank */
+.p-hero{padding:16px 4px 0}
+.p-hero h2{margin:0;font-size:36px;font-weight:700;line-height:42px;display:flex;align-items:center;gap:6px}
+.p-hero h2 .fire{font-size:28px;width:28px;height:28px;line-height:28px;margin:0}
+.p-hero .form{margin-top:12px;gap:6px}
+.p-hero .fchip{width:14px;height:14px}
+.p-hero p{margin:10px 0 0;font-size:14px;color:var(--on-surface-var)}
 .stat.hot{background:var(--ball);border-color:var(--ball);color:var(--on-ball)}
 .stat.hot > .ms,.stat.hot small{color:var(--on-ball)}
 .dim{color:var(--outline);font-weight:400}
-.hls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:8px}
-.hl{background:var(--surface-1);border-radius:16px;padding:12px 16px;display:flex;gap:12px;align-items:center}
-.hl>.ms{color:var(--primary)}
-.hl div{display:flex;flex-direction:column;min-width:0}
-.hl small{font-size:12px;color:var(--on-surface-var)}
-.hl b{font-size:17px;font-weight:600}
-.hl span{font-size:13px;color:var(--on-surface-var)}
 .set-row{display:grid;grid-template-columns:64px minmax(0,1fr) 12px minmax(0,1fr);gap:8px;align-items:center}
 .set-row.set-head span{font-size:12px;font-weight:600;color:var(--on-surface-var);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .set-l{font-size:14px;color:var(--on-surface-var)}
@@ -252,7 +257,7 @@ table.mc-t tr.won .nm{font-weight:600}
 table.mc-t tr.lost td.mc-nm{color:var(--on-surface-var)}
 
 /* Borders around cards and tables instead of lines between rows */
-.card,.mcard,.comp-card,.stat,.hl,details.week,.empty{border:1px solid var(--card-line)}
+.card,.mcard,.comp-card,.stat,details.week,.empty{border:1px solid var(--card-line)}
 table.lt thead th{border-bottom:1px solid var(--card-line)}
 
 /* Standard cell padding for every table: 16px at the left and right edges

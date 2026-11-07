@@ -933,49 +933,50 @@ function renderLeague() {
 
 // ----- Player profile -----
 // Record panel: one row per stat. Shared totals ("7 of 8") get a single
-// full-width bar filled to the share won; streaks and bagels are plain numbers.
+// full-width bar filled to the share won.
 function recordPanel(r) {
   const bar = (title, won, total) => {
     const pc = total ? Math.round(won / total * 100) : 0;
     return `<div class="rp-row"><div class="rp-top"><span class="rp-t">${title}</span><span class="rp-v"><b class="num">${won}</b> of ${total}<small class="num">${total ? pc + "%" : "–"}</small></span></div>`
       + `<div class="rp-bar" role="img" aria-label="${won} of ${total}"><span style="width:${pc}%"></span></div></div>`;
   };
-  const plain = (title, value) => `<div class="rp-row"><div class="rp-top"><span class="rp-t">${title}</span><span class="rp-v"><b class="num">${value}</b></span></div></div>`;
   let h = `<div class="rp card">` + bar("Matches won", r.W, r.P) + bar("Sets won", r.SW, r.SW + r.SL) + bar("Games won", r.GW, r.GW + r.GL);
   if (r.tbW + r.tbL) h += bar("Tiebreaks won", r.tbW, r.tbW + r.tbL);
-  h += plain("Longest win streak", r.best) + plain("Bagels served", r.bagS) + plain("Bagels eaten", r.bagE);
   return h + `</div>`;
 }
 function renderPlayer(id) {
   const name = pname(id);
   document.title = `${name || "Player"} · ${SITE}`;
-  const top = header(esc(name || "Player"), "", { back: "#/league" });
+  const top = header("Player", "", { back: "#/league" });
   if (!S.playersReady || !S.leagueReady || !S.compsReady) { app.innerHTML = top + `<div class="loading">Loading…</div>`; return; }
   if (!S.players[id]) { app.innerHTML = top + `<main><div class="empty">This player isn't in the list any more. <a href="#/league">Back to the league</a></div></main>`; wire(); return; }
   let h = top + `<main>`;
   if (S.leagueError) h += leagueGateMsg();
   const st = leagueStats(), r = st.players[id];
-  // Stat box: small icon top left, the stat large at the bottom with its label under it.
-  const tile = (label, value, icon, hot) => `<div class="stat${hot ? " hot" : ""}"><span class="ms" aria-hidden="true">${icon}</span><b class="num">${value}</b><small>${label}</small></div>`;
+  // Stat box: small icon top left, the stat large at the bottom, its label under it and an optional detail line.
+  const tile = (label, value, icon, hot, sub) => `<div class="stat${hot ? " hot" : ""}"><span class="ms" aria-hidden="true">${icon}</span><b class="num">${value}</b><small>${label}</small>${sub ? `<span class="sub">${sub}</span>` : ""}</div>`;
 
-  h += `<section><div class="sec-h"><h2>League</h2>${r ? `<span>${r.P >= LEAGUE_MIN ? `Ranked ${st.playerRows.indexOf(r) + 1} of ${st.playerRows.filter(x => x.P >= LEAGUE_MIN).length}` : `${LEAGUE_MIN - r.P} more to be ranked`}</span>` : ""}</div>`;
+  // Hero: big name (with a flame when on fire), form underneath, then the rank.
+  const ranked = r && r.P >= LEAGUE_MIN;
+  const rankText = !r ? "No league matches yet" : ranked ? `Ranked ${st.playerRows.indexOf(r) + 1} of ${st.playerRows.filter(x => x.P >= LEAGUE_MIN).length} in the league` : `${LEAGUE_MIN - r.P} more match${LEAGUE_MIN - r.P === 1 ? "" : "es"} to be ranked`;
+  h += `<section class="p-hero"><h2>${esc(name)}${r ? fire(r) : ""}</h2>${r ? `<div class="form">${formDots(r.form)}</div>` : ""}<p>${rankText}</p></section>`;
+
+  h += `<section><div class="sec-h"><h2>League</h2>${r ? `<span>${r.P} match${r.P === 1 ? "" : "es"}</span>` : ""}</div>`;
   if (!r) h += `<div class="empty">No league matches yet.</div>`;
   else {
-    h += `<div class="stats">`
-      + tile("Played", r.P, "sports_tennis")
-      + tile(r.cur ? "Wins in a row" : "Win streak", r.cur || "–", "local_fire_department", r.cur >= FIRE_STREAK)
-      + tile("Form", `<div class="form">${formDots(r.form)}</div>`, "show_chart")
-      + `</div>`;
     h += recordPanel(r);
-    // Partner and rival highlights
     const partners = Object.entries(r.partners).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || pname(a).localeCompare(pname(b)));
     const opps = Object.entries(r.opps).sort(([a, x], [b, y]) => y.P - x.P || y.L - x.L || pname(a).localeCompare(pname(b)));
-    const hl = (label, icon, name, text) => `<div class="hl"><span class="ms" aria-hidden="true">${icon}</span><div><small>${label}</small><b>${name}</b><span>${text}</span></div></div>`;
     const courts = Object.entries(r.courts).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || a - b);
-    h += `<div class="hls">`;
-    if (partners[0]) { const [pid, x] = partners[0]; h += hl("Favourite partner", "handshake", plink(pid), `${x.P} match${x.P === 1 ? "" : "es"} together, ${x.W} won`); }
-    if (opps[0]) { const [pid, x] = opps[0]; h += hl("Biggest rival", "swords", plink(pid), `Played ${x.P}, won ${x.W}, lost ${x.L}`); }
-    if (courts[0]) { const [ct, x] = courts[0]; h += hl("Favourite court", "location_on", `Court ${esc(ct)}`, `${x.P} match${x.P === 1 ? "" : "es"} there, ${x.W} won`); }
+    const nm = n => `${n} match${n === 1 ? "" : "es"}`;
+    h += `<div class="stats two">`;
+    if (partners[0]) { const [pid, x] = partners[0]; h += tile("Favourite partner", plink(pid), "handshake", false, `${nm(x.P)} together, ${x.W} won`); }
+    if (opps[0]) { const [pid, x] = opps[0]; h += tile("Biggest rival", plink(pid), "swords", false, `Played ${x.P}, won ${x.W}`); }
+    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", `Court ${esc(ct)}`, "location_on", false, `${nm(x.P)}, ${x.W} won`); }
+    h += tile(r.cur ? "Wins in a row" : "Current streak", r.cur || "–", "local_fire_department", r.cur >= FIRE_STREAK, r.cur >= FIRE_STREAK ? "On fire" : "");
+    h += tile("Best win streak", r.best, "trending_up");
+    h += tile("Bagels served", r.bagS, "bakery_dining", false, "Sets won 6–0");
+    h += tile("Bagels eaten", r.bagE, "bakery_dining", false, "Sets lost 0–6");
     h += `</div>`;
     h += `</section><section><div class="sec-h"><h2>Partners</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">With</th><th>P</th><th>W</th><th>Win%</th></tr></thead><tbody>`
       + partners.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${pctText(x)}</td></tr>`).join("")
@@ -992,7 +993,7 @@ function renderPlayer(id) {
   const comps = sortedComps().filter(([, c]) => c.teams.some(t => t.p1 === id || t.p2 === id));
   const won = comps.filter(([, c]) => { if (status(c) !== "done") return false; const t = standings(c)[0]?.t; return t && (t.p1 === id || t.p2 === id); });
   h += `<section><div class="sec-h"><h2>Competitions</h2></div>`;
-  h += comps.length ? `<div class="stats">${tile("Played", comps.length, "calendar_month")}${tile(won.length === 1 ? "Title" : "Titles", won.length, "trophy", won.length > 0)}</div>` : `<div class="empty">No competitions yet.</div>`;
+  h += comps.length ? `<div class="stats two">${tile("Played", comps.length, "calendar_month")}${tile(won.length === 1 ? "Title" : "Titles", won.length, "trophy", won.length > 0)}</div>` : `<div class="empty">No competitions yet.</div>`;
   h += `</section>${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
   app.innerHTML = h; wire();
 }
