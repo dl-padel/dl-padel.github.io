@@ -5,13 +5,14 @@
   --secondary-container:#4f3f68; --on-secondary-container:#e8dcff;
   --tertiary-container:#667700; --on-tertiary-container:#eaff81;
   --ball:#d2f02a; --on-ball:#222900;
-  --surface:#15121b; --surface-1:#1e1a24; --surface-2:#221e28; --surface-3:#2d2833;
+  --surface:#0a090d; --surface-1:#131117; --surface-2:#17141b; --surface-3:#221e27; /* "darkest" option, Nov 2026 (was #15121b/#1e1a24/#221e28/#2d2833) */
   --on-surface:#e8dfee; --on-surface-var:#cdc2d8; --outline:#968da1; --outline-var:#4b4455;
   --done-card:#16271c; --done-card-hover:#1c3123;
   --gold:#d2f02a; --gold-c:#d2f02a; --on-gold-c:#222900; /* winners use the padel-ball colour */
   --champ-row:#364000; --on-champ-row:#eaff81; /* dark shade of the ball colour for the winners' table row */
   --win:#8fd8a3; --win-c:#0f4f27; --loss:#ffb3ad; --loss-c:#7a1a20; --draw-c:#3a3d44;
   --font:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"Kanit","Roboto Flex",system-ui,sans-serif; /* sporty display face: headings, big names, stat values */
   --nav-h:80px;
   --row-alt:color-mix(in srgb,var(--on-surface) 4%,var(--surface-1)); /* alternate table rows and the winners' row in match cards */
   --card-line:var(--outline-var); /* 1px border around cards and tables */
@@ -26,6 +27,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 button,select{font:inherit;color:inherit}
 a{color:var(--primary)}
 :focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+/* Display face: Kanit Black Italic, always uppercase, for headings, big names and stat values (match card scores stay Roboto) */
+.bar-title h1,.sec-h h2,.comp-card h3,.p-hero h2,.pg-hero h1,.stat b{font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;letter-spacing:.02em}
 .loading{padding:48px 16px;text-align:center;color:var(--on-surface-var)}
 
 /* Top app bar */
@@ -45,13 +48,13 @@ main.has-nav{padding-bottom:calc(var(--nav-h) + 24px + env(safe-area-inset-botto
 main.has-save{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 section{scroll-margin-top:calc(80px + env(safe-area-inset-top,0px))}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:16px 4px 10px}
-.sec-h h2{margin:0;font-size:20px;font-weight:500}
+.sec-h h2{margin:0;font-size:24px;font-weight:500}
 .sec-h span{font-size:13px;color:var(--on-surface-var)}
 
 /* Home */
 .comp-list{display:flex;flex-direction:column;gap:10px}
 .comp-card{display:flex;align-items:center;gap:12px;background:var(--surface-1);border-radius:16px;padding:16px;text-decoration:none;color:inherit}
-.comp-card:hover{background:var(--surface-2)}
+.comp-card:hover{--cbg:var(--surface-2)}
 .card-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .comp-card h3{margin:0;font-size:24px;font-weight:600;line-height:30px}
@@ -90,7 +93,7 @@ td.w{font-weight:700}
 .form{display:flex;gap:5px;align-items:center;justify-content:flex-start}
 .fchip{width:12px;height:12px;border-radius:50%;flex:none}
 /* Form dots: vivid green win (kept separate from the brand ball green), vivid red loss, grey draw */
-.fW{background:#00cc58} .fL{background:#ff4260} .fD{background:var(--outline)}
+.fW{background:#00cc58} .fL{background:#f03b2b} .fD{background:var(--outline)}
 .fnone{color:var(--outline);font-size:13px}
 
 /* Matches */
@@ -176,21 +179,49 @@ td.w{font-weight:700}
 tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color:var(--on-surface-var);background:var(--surface)}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 /* Stat boxes: icon top left, big stat bottom left with its label underneath */
-.stat{background:var(--surface-1);border-radius:16px;padding:12px 14px 14px;display:flex;flex-direction:column;min-width:0;min-height:112px}
-.stat > .ms{font-size:20px;width:20px;height:20px;line-height:20px;color:var(--ball);font-variation-settings:"FILL" 1;margin-bottom:auto}
-.stat b{font-size:26px;font-weight:700;line-height:32px;margin-top:12px;min-height:32px;display:flex;align-items:center}
+.stat{background:var(--surface-1);border-radius:16px;padding:12px 14px 14px;display:flex;flex-direction:column;min-width:0;min-height:136px}
+.stat > .ms{font-size:28px;width:28px;height:28px;line-height:28px;color:var(--ball);font-variation-settings:"FILL" 1;margin-bottom:auto}
+.stat b{font-size:36px;font-weight:700;line-height:42px;margin-top:12px;min-height:42px;display:flex;align-items:center}
 .stat small{font-size:12px;line-height:16px;color:var(--on-surface-var);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat .form{padding:0;gap:4px}
 .stats.two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}
+.sec-h + .stats{margin-top:0}
 .stat b .plink{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stat b{min-width:0}
 /* Profile hero: big name, form, rank */
-.p-hero{padding:16px 4px 0}
-.p-hero h2{margin:0;font-size:36px;font-weight:700;line-height:42px;display:flex;align-items:center;gap:6px}
-.p-hero h2 .fire{font-size:28px;width:28px;height:28px;line-height:28px;margin:0}
-.p-hero .form{margin-top:12px;gap:6px}
-.p-hero .fchip{width:14px;height:14px}
-.p-hero p{margin:0 0 4px;font-size:14px;font-weight:500;color:var(--on-surface-var)}
+/* Profile hero: photo bottom-right; purple glow and cage texture are centred on the card's top edge under the photo, so they read as a semicircle rising from the card; quick stats top left, name along the bottom.
+   The hero ends exactly where the record panel starts (negative margin cancels main's 28px gap). */
+.p-hero{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;min-height:240px;margin:0 -16px -28px;padding:16px 0 0;background:radial-gradient(circle 240px at calc(75% - 32px) 100%,rgba(140,60,255,.28),rgba(140,60,255,0))}
+.p-hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22%3E%3Cg opacity=%22.1%22 fill=%22%23d5baff%22%3E%3Cpath d=%22M24 0H0V24%22 fill=%22none%22 stroke=%22%23d5baff%22 stroke-width=%221.2%22/%3E%3Ccircle cx=%220%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%220%22 cy=%2224%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%2224%22 r=%221.8%22/%3E%3C/g%3E%3C/svg%3E") center top/22px 22px;-webkit-mask-image:radial-gradient(circle 280px at calc(75% - 32px) 100%,#000 0%,transparent 100%);mask-image:radial-gradient(circle 280px at calc(75% - 32px) 100%,#000 0%,transparent 100%)}
+.p-photo{display:block;margin:0 32px 0 auto;width:auto;height:auto;max-height:300px;max-width:50%;pointer-events:none;user-select:none;position:relative;z-index:0} /* in the flow so it sets the hero height; never wider than half the screen; 32px = card inset + corner radius */
+.p-id{position:absolute;left:20px;right:20px;bottom:20px;z-index:1}
+/* Soft dark glow behind the name, for contrast over the photo */
+.p-id::before{content:"";position:absolute;inset:-40px -48px -24px -36px;z-index:-1;pointer-events:none;background:radial-gradient(closest-side,rgba(10,9,13,.35),rgba(10,9,13,0) 90%)}
+.p-hero h2{margin:0;font-size:min(72px,calc((min(100vw,760px) - 40px) / (var(--n,6) * .74)));font-weight:700;line-height:.95;display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;white-space:nowrap;text-shadow:0 2px 16px rgba(10,9,13,.6)}
+.p-hero h2 .fire{font-size:48px;width:48px;height:48px;line-height:48px;margin:0}
+/* Breadcrumb in place of the top bar */
+.crumbs{max-width:760px;margin:0 auto;padding:env(safe-area-inset-top,0px) max(8px,env(safe-area-inset-right,0px)) 0 max(8px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:0;font-size:14px;color:var(--on-surface-var);position:relative;z-index:2}
+.crumbs a{color:var(--primary);text-decoration:none;font-weight:500;padding:12px 8px;min-height:44px;display:inline-flex;align-items:center}
+.crumbs .ms{font-size:18px;width:18px;opacity:.6}
+.crumbs [aria-current]{padding:12px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crumb-acts{margin-left:auto;display:flex;align-items:center;flex:none}
+.crumbs .crumb-acts .ms{font-size:22px;width:22px;opacity:1}
+.crumbs .icon-btn{width:44px;height:44px}
+/* Page hero for list pages: big Kanit title bottom left over a soft purple glow and cage texture on the right */
+.pg-hero{position:relative;isolation:isolate;max-width:760px;margin:0 auto;padding:56px max(20px,env(safe-area-inset-left,0px)) 12px;min-height:150px;display:flex;flex-direction:column;justify-content:flex-end;background:radial-gradient(ellipse 42% 46% at 76% 54%,rgba(140,60,255,.22),rgba(140,60,255,0))}
+.pg-hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22%3E%3Cg opacity=%22.1%22 fill=%22%23d5baff%22%3E%3Cpath d=%22M24 0H0V24%22 fill=%22none%22 stroke=%22%23d5baff%22 stroke-width=%221.2%22/%3E%3Ccircle cx=%220%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%220%22 cy=%2224%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%2224%22 r=%221.8%22/%3E%3C/g%3E%3C/svg%3E") center top/22px 22px;-webkit-mask-image:radial-gradient(ellipse 46% 48% at 76% 54%,#000 0%,transparent 100%);mask-image:radial-gradient(ellipse 46% 48% at 76% 54%,#000 0%,transparent 100%)}
+.pg-hero h1{margin:0;text-shadow:0 2px 16px rgba(10,9,13,.6);font-size:min(72px,calc((min(100vw,760px) - 40px) / (var(--n,6) * .74)));line-height:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg-sub{margin-top:10px;font-size:13px;color:var(--on-surface-var)}
+.pg-sub .card-lines{opacity:1}
+/* Ball-green pill sitting just above the big hero title */
+.pg-pill{margin:0 0 10px;display:flex}
+.chip.ball{background:var(--ball);color:var(--on-ball);text-transform:uppercase;letter-spacing:.06em}
+/* Optional hero photo (Players/Pairs): right side on the glow, fading out at the bottom since no card sits over it */
+.pg-hero.has-photo{min-height:250px;padding-top:24px}
+.pg-photo{position:absolute;right:20px;bottom:0;z-index:-1;height:230px;width:auto;max-width:56%;object-fit:contain;object-position:right bottom;pointer-events:none;user-select:none;-webkit-mask-image:linear-gradient(to bottom,#000 55%,transparent 100%);mask-image:linear-gradient(to bottom,#000 55%,transparent 100%)}
+/* Whole objects (League trophy and racket): no bottom fade, lifted slightly off the bottom edge */
+.pg-photo.whole{-webkit-mask-image:none;mask-image:none;bottom:12px;height:210px}
+.p-hero + section{position:relative;z-index:1}
 .stat.hot{background:var(--ball);border-color:var(--ball);color:var(--on-ball)}
 .stat.hot > .ms,.stat.hot small{color:var(--on-ball)}
 .dim{color:var(--outline);font-weight:400}
@@ -255,8 +286,12 @@ table.mc-t tr.won .nm{font-weight:600}
 table.mc-t tr.lost td.mc-nm{color:var(--on-surface-var)}
 
 /* Borders around cards and tables instead of lines between rows */
-.card,.mcard,.comp-card,.stat,details.week,.empty{border:1px solid var(--card-line)}
-table.lt thead th{border-bottom:1px solid var(--card-line)}
+/* Cards: 1px gradient stroke, #4b4455 at the top left fading into the card's own colour (--cbg) */
+.card,.mcard,.comp-card,.stat,details.week,.empty{--cbg:var(--surface-1);border:1px solid transparent;background:linear-gradient(var(--cbg),var(--cbg)) padding-box,linear-gradient(135deg,#4b4455 0%,var(--cbg) 50%) border-box}
+/* Ball-green line under league table headers, drawn as an inset shadow (not a border) so it moves with the
+   pinned Rank/Player columns on the full tables instead of being covered or doubled by them */
+table.lt thead th{border-bottom:0;box-shadow:inset 0 -1px 0 var(--ball)}
+table.lt.full thead th.team{box-shadow:inset -1px 0 0 var(--outline-var),inset 0 -1px 0 var(--ball)}
 
 /* Standard cell padding for every table: 16px at the left and right edges
    (matching the card padding), 4-6px between cells. */
@@ -274,10 +309,29 @@ table tr.sep > td{padding-left:16px;padding-right:16px}
 .rp-v b{font-size:20px;font-weight:700;color:var(--on-surface);margin-right:2px}
 .rp-v small{font-size:13px;margin-left:8px;color:var(--on-surface);font-weight:600}
 .rp-bar{height:6px;border-radius:3px;background:var(--surface-3);margin-top:8px;overflow:hidden}
-.rp-bar span{display:block;height:100%;border-radius:3px;background:var(--ball)}
+.rp-bar span{display:block;height:100%;border-radius:3px;background:var(--ball);transition:width .9s cubic-bezier(.2,.7,.2,1)}
 
 /* Admin weekly recap */
 .recap-nav{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .recap-nav b{font-size:16px;font-weight:600}
 .recap-nav .icon-btn:disabled{opacity:.3;cursor:default}
 pre.recap{margin:0;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--card-line);font:inherit;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+
+/* Entrance animation (see animateIn in app.js): sections fade up once when a page opens */
+.rise{opacity:0;transform:translateY(14px)}
+.rise.in{opacity:1;transform:none;transition:opacity .5s ease var(--d,0ms),transform .5s cubic-bezier(.2,.7,.2,1) var(--d,0ms)}
+/* Profile photo rises 60px from behind the record panel as the header comes in */
+.p-hero.rise .p-photo{transform:translateY(60px);opacity:0}
+.p-hero.rise.in .p-photo{transform:none;opacity:1;transition:transform .8s cubic-bezier(.2,.7,.2,1) .1s,opacity .5s ease .1s}
+/* Clip the header at its bottom edge so the rising photo is hidden below the card line, even while the card is still fading in */
+.p-hero.rise{clip-path:inset(-200px -200px 0 -200px)}
+/* Profile quick stats, top left of the header: rank (big position, small "/total", Kanit), form */
+.p-hero .p-photo{align-self:flex-end;flex:none}
+.p-qs{position:absolute;top:16px;left:20px;z-index:1;margin:0;display:flex;flex-direction:column;gap:10px}
+.p-qs div{display:flex;align-items:center}
+.p-qs dd{margin:0;display:flex;align-items:baseline;color:var(--on-surface)}
+.p-qs dd b,.p-qs dd small{font-family:var(--display);font-style:italic;font-weight:900;letter-spacing:.02em}
+.p-qs dd b{font-size:32px;line-height:1}
+.p-qs dd small{font-size:16px;color:var(--on-surface-var);margin-left:2px}
+.p-qs .form{gap:6px}
+.p-qs .fchip{width:10px;height:10px}

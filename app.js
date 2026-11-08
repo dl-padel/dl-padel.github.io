@@ -201,6 +201,7 @@ function route() {
   if (p[0] === "league" && p[1] === "add") return { name: "leagueEdit", id: "new" };
   if (p[0] === "league" && p[1] === "m" && p[2]) return { name: "leagueEdit", id: p[2] };
   if (p[0] === "league") return { name: "league" };
+  if (p[0] === "p" && p[1] && p[2] === "matches") return { name: "leagueMatches", pid: p[1] };
   if (p[0] === "p" && p[1]) return { name: "player", id: p[1] };
   if (p[0] === "admin" && p[1] === "c" && p[2]) return { name: "editComp", id: p[2] };
   if (p[0] === "admin") return { name: "admin" };
@@ -231,7 +232,7 @@ function render() {
   if (r.name === "editComp") return renderEditComp(r.id);
   if (r.name === "league") { ensureLeague(); return renderLeague(); }
   if (r.name === "leagueTable") { ensureLeague(); return renderLeagueTable(r.kind); }
-  if (r.name === "leagueMatches") { ensureLeague(); return renderLeagueMatches(); }
+  if (r.name === "leagueMatches") { ensureLeague(); return renderLeagueMatches(r.pid); }
   if (r.name === "leagueEdit") { ensureLeague(); return renderLeagueEdit(r.id); }
   if (r.name === "player") { ensureLeague(); return renderPlayer(r.id); }
   return renderHome();
@@ -250,6 +251,20 @@ function header(title, sub, o = {}) {
   if (o.extra) h += o.extra;
   return h + `</div></header>`;
 }
+// Breadcrumb: slim, low-key replacement for the top bar on public pages. Each link has a 44px tap area;
+// optional action buttons (refresh, add, admin) sit at the right.
+const crumbs = (links, here, actions = "") => `<nav class="crumbs" aria-label="Breadcrumb">${links.map(([href, label]) => `<a href="${href}">${esc(label)}</a><span class="ms" aria-hidden="true">chevron_right</span>`).join("")}<span aria-current="page">${esc(here)}</span>${actions ? `<span class="crumb-acts">${actions}</span>` : ""}</nav>`;
+// Page top for list pages: breadcrumb (with refresh/add/admin buttons on the right) plus a hero with a big Kanit title
+// on the glow and cage texture, like the player profile but with no photo or stats. title is plain text; sub is HTML.
+function pageTop(trail, here, title, o = {}) {
+  let acts = "";
+  if (o.refresh) acts += `<button class="icon-btn" id="refresh" aria-label="Refresh scores" title="Refresh scores"><span class="ms">refresh</span></button>`;
+  if (o.admin) acts += `<a class="icon-btn" href="${o.admin}" aria-label="Admin" title="Admin"><span class="ms">edit_square</span></a>`;
+  if (o.extra) acts += o.extra;
+  const t = title || "";
+  return crumbs(trail, here, acts) + `<header class="pg-hero${o.photo ? " has-photo" : ""}">${o.photo ? `<img class="pg-photo${o.whole ? " whole" : ""}" src="${o.photo}" alt="" aria-hidden="true">` : ""}${o.pill ? `<p class="pg-pill"><span class="chip ball">${esc(o.pill)}</span></p>` : ""}<h1 style="--n:${Math.max(6, t.length)}">${esc(t)}</h1>${o.sub ? `<div class="pg-sub">${o.sub}</div>` : ""}</header>`;
+}
+const HOME = ["#/", "Home"];
 // Homepage hero: the club logo, centred. Replaces the top bar on the homepage.
 let heroPlayed = false; // the logo animation plays once per visit, not on every live update
 const hero = () => `<header class="hero"><h1 class="sr">${SITE}</h1><img src="logo.svg?v=2" alt="DL Padel" width="359" height="345"${heroPlayed ? "" : ' class="pre"'}></header>`;
@@ -294,6 +309,45 @@ function footer(secret = { href: "#/admin", text: "Super secret admin area", wa:
 function wire() {
   const r = document.getElementById("refresh");
   if (r) r.onclick = () => { r.classList.add("spin"); setTimeout(() => location.reload(), 250); };
+  animateIn();
+}
+
+// ----- Entrance animation -----
+// Sections fade up as they come into view; record bars grow and big numbers count up.
+// Plays once when you arrive on a page, never on live-update redraws. Skipped for reduced motion.
+let animatedRoute = "";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+function animateIn() {
+  const route = location.hash || "#/";
+  if (route === animatedRoute) return;
+  animatedRoute = route;
+  if (reduceMotion.matches || !("IntersectionObserver" in window)) return;
+  const main = app.querySelector("main"); if (!main) return;
+  // Skip the footer and anything fixed to the screen (bottom nav, save bar): a transform would unpin them.
+  const items = [...main.children].filter(el => !el.matches(".foot, .nav, .savebar") && !el.querySelector(".nav, .savebar") && getComputedStyle(el).position !== "fixed");
+  const bars = [...main.querySelectorAll(".rp-bar span")];
+  // Snap bars to empty with no transition (otherwise they visibly shrink first), then re-enable it for the grow.
+  bars.forEach(b => { b.dataset.w = b.style.width; b.style.transition = "none"; b.style.width = "0"; });
+  if (bars.length) { void main.offsetWidth; bars.forEach(b => { b.style.transition = ""; }); }
+  const nums = [...main.querySelectorAll(".rp-v b, .stat b")].filter(b => /^\d+$/.test(b.textContent.trim()));
+  nums.forEach(b => { b.dataset.n = b.textContent.trim(); b.textContent = "0"; });
+  const countUp = el => {
+    const end = +el.dataset.n, t0 = performance.now(), dur = 800;
+    const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(end * e); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
+  let shown = 0;
+  const io = new IntersectionObserver(entries => entries.forEach(en => {
+    if (!en.isIntersecting) return;
+    const el = en.target; io.unobserve(el);
+    el.style.setProperty("--d", `${Math.min(shown++, 5) * 70}ms`);
+    el.classList.add("in");
+    setTimeout(() => {
+      el.querySelectorAll(".rp-bar span").forEach(b => { b.style.width = b.dataset.w; });
+      el.querySelectorAll("b[data-n]").forEach(countUp);
+    }, 150 + Math.min(shown, 5) * 70);
+  }), { rootMargin: "0px 0px -40px 0px" });
+  items.forEach(el => { el.classList.add("rise"); io.observe(el); });
 }
 
 // ----- Home: pick League or Competitions -----
@@ -306,7 +360,7 @@ function renderHome() {
   const line = (icon, text) => `<span class="card-line"><span class="ms" aria-hidden="true">${icon}</span>${esc(text)}</span>`;
   const compPill = live ? `<span class="chip live">Live now</span>` : next ? `<span class="chip upcoming">Next: ${esc(shortDate(next[1].date) || "date to be set")}</span>` : "";
   let h = hero() + `<main><section><div class="sec-h"><h2>David Lloyd Advanced Padel</h2></div><div class="comp-list">`;
-  h += `<a class="comp-card" href="#/league"><div class="card-main"><h3>League</h3><div class="card-lines">${line("sports_tennis", "Weekly matches")}${line("leaderboard", "Tables and player stats")}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
+  h += `<a class="comp-card" href="#/league"><div class="card-main"><h3>League</h3><div class="card-lines">${line("scoreboard", "Weekly matches")}${line("leaderboard", "Tables and player stats")}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
   h += `<a class="comp-card" href="#/comps"><div class="card-main">${compPill ? `<div class="chips">${compPill}</div>` : ""}<h3>Competitions</h3><div class="card-lines">${line("trophy", `${n} competition${n === 1 ? "" : "s"}`)}</div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
   h += `</div></section>${footer()}</main>`;
   const oldHero = heroPlayed && app.querySelector(".hero"); // keep the logo (and any running animation) across live redraws
@@ -319,7 +373,7 @@ const shortDate = d => { const x = d ? new Date(d + "T12:00:00") : null; return 
 // ----- Competitions list -----
 function renderComps() {
   document.title = `Competitions · ${SITE}`;
-  let h = header("Competitions", "", { back: "#/" });
+  let h = pageTop([HOME], "Competitions", "Competitions");
   if (!S.compsReady || !S.playersReady) { app.innerHTML = h + `<div class="loading">Loading…</div>`; return; }
   const list = sortedComps();
   h += `<main><section>`;
@@ -379,9 +433,9 @@ function roundBlock(c, id, r, list, isNext) {
   return `<div class="round${isNext ? " next" : ""}"><div class="round-h">${isNext ? '<span class="chip upcoming">Up next</span>' : ""}<b>Round ${r}</b><span>·</span><span class="num">${roundTime(c, r)}</span></div><div class="mcards">${list.map(m => compMatchCard(c, id, m, r)).join("")}</div></div>`;
 }
 function renderComp(id) {
-  if (!S.compsReady || !S.playersReady) { app.innerHTML = header(SITE, "", { back: "#/comps" }) + `<div class="loading">Loading…</div>`; return; }
+  if (!S.compsReady || !S.playersReady) { app.innerHTML = pageTop([HOME, ["#/comps", "Competitions"]], "Loading", "") + `<div class="loading">Loading…</div>`; return; }
   const c = S.comps[id];
-  if (!c) { app.innerHTML = header("Not found", "", { back: "#/comps" }) + `<main><div class="empty">This competition doesn't exist or has been deleted. <a href="#/comps">See all competitions</a></div></main>`; return; }
+  if (!c) { app.innerHTML = pageTop([HOME, ["#/comps", "Competitions"]], "Not found", "Not found") + `<main><div class="empty">This competition doesn't exist or has been deleted. <a href="#/comps">See all competitions</a></div></main>`; return; }
   document.title = `${c.name} · ${SITE}`;
   DEFENDING = defendingTeamIds(c, id);
   const st = standings(c), R = roundsOf(c), anyDraw = st.some(r => r.D > 0), playedCount = c.matches.filter(played).length;
@@ -390,7 +444,7 @@ function renderComp(id) {
   let nextR = 0; for (let r = 1; r <= R; r++) if (byRound[r]?.some(m => !played(m))) { nextR = r; break; }
 
   const sub = detailsHtml(c);
-  let h = header(esc(c.name), sub, { back: "#/comps", refresh: true, admin: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : null }) + `<main class="has-nav">`;
+  let h = pageTop([HOME, ["#/comps", "Competitions"]], c.name, c.name, { sub, refresh: true, admin: S.isAdmin ? `#/admin/c/${encodeURIComponent(id)}` : null }) + `<main class="has-nav">`;
 
   h += `<section id="table"><div class="sec-h"><h2>Table</h2><span>${playedCount} of ${c.matches.length} played</span></div><div class="card"><div class="tbl-wrap"><table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th>${anyDraw ? "<th>D</th>" : ""}<th>L</th><th title="Games won">GF</th><th title="Games lost">GA</th><th class="l">Form</th></tr></thead><tbody>`;
   st.forEach((r, i) => {
@@ -872,11 +926,11 @@ const moreLink = (href, total, what) => total > TOP_N ? `<a class="more-link" hr
 function renderLeagueTable(kind) {
   const isP = kind === "players", title = isP ? "Players" : "Pairs";
   document.title = `${title} · League · ${SITE}`;
-  const top = sub => header(title, sub, { back: "#/league", refresh: true });
-  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top("") + `<div class="loading">Loading…</div>`; return; }
-  if (S.leagueError) { app.innerHTML = top("") + `<main>${leagueGateMsg()}</main>`; wire(); return; }
+  const top = () => pageTop([HOME, ["#/league", "League"]], title, title, { refresh: true, photo: `img/heroes/${kind}.webp` });
+  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top() + `<div class="loading">Loading…</div>`; return; }
+  if (S.leagueError) { app.innerHTML = top() + `<main>${leagueGateMsg()}</main>`; wire(); return; }
   const st = leagueStats(), rows = isP ? st.playerRows : st.pairRows;
-  let h = top(`League · ${rows.length} ${kind} · ${isP ? "by win %" : "by wins"}`) + `<main>`;
+  let h = top() + `<main>`;
   if (st.matches.some(m => m.sample)) h += `<div class="msg sample"><span class="ms" aria-hidden="true">science</span><span><b>Sample data.</b> These matches are made up to show how the league works.</span></div>`;
   h += `<section>${rows.length ? (isP ? playersTable(rows, Infinity, true) : pairsTable(rows, Infinity, true)) + `<p class="hint key">SF/SA sets won and lost · GF/GA games won and lost${isP ? ` · ranked by win %, then wins, set difference, game difference; ${LEAGUE_MIN} matches to be ranked` : " · ranked by wins, then win %, set difference, game difference"}</p>` : `<div class="empty">No matches yet.</div>`}</section>`;
   h += `${footer(LEAGUE_FOOTER)}</main>`;
@@ -899,16 +953,19 @@ function weekLabel(ws, thisWs) {
   const f = x => `${x.getDate()} ${MONTHS[x.getMonth()]}`;
   return a.getMonth() === b.getMonth() ? `${a.getDate()}–${f(b)}` : `${f(a)} – ${f(b)}`;
 }
-function renderLeagueMatches() {
-  document.title = `Matches · League · ${SITE}`;
+// All league matches by week; with pid, only that player's matches (#/p/{id}/matches, under a breadcrumb).
+function renderLeagueMatches(pid) {
+  const pn = pid ? pname(pid) : "";
+  document.title = pid ? `${pn || "Player"} · Matches · ${SITE}` : `Matches · League · ${SITE}`;
   const add = canScore() ? `<a class="icon-btn" href="#/league/add" aria-label="Add a match" title="Add a match"><span class="ms">add</span></a>` : "";
-  const top = sub => header("Matches", sub, { back: "#/league", refresh: true, extra: add });
-  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top("") + `<div class="loading">Loading…</div>`; return; }
-  if (S.leagueError) { app.innerHTML = top("") + `<main>${leagueGateMsg()}</main>`; wire(); return; }
-  const st = leagueStats(), n = st.matches.length, thisWs = weekStart(todayISO());
+  const top = () => pid ? pageTop([HOME, ["#/league", "League"], [`#/p/${encodeURIComponent(pid)}`, pn || "Player"]], "Matches", `${pn || "Player"}\u2019s matches`) : pageTop([HOME, ["#/league", "League"]], "Matches", "Matches", { refresh: true, extra: add });
+  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top() + `<div class="loading">Loading…</div>`; return; }
+  if (S.leagueError) { app.innerHTML = top() + `<main>${leagueGateMsg()}</main>`; wire(); return; }
+  const st = leagueStats(), thisWs = weekStart(todayISO());
+  const all = pid ? st.matches.filter(m => m.a.includes(pid) || m.b.includes(pid)) : st.matches, n = all.length;
   const weeks = [];
-  st.matches.slice().reverse().forEach(m => { const ws = weekStart(m.date), last = weeks[weeks.length - 1]; if (last && last.ws === ws) last.list.unshift(m); else weeks.push({ ws, list: [m] }); });
-  let h = top(`League · ${n} match${n === 1 ? "" : "es"}`) + `<main>`;
+  all.slice().reverse().forEach(m => { const ws = weekStart(m.date), last = weeks[weeks.length - 1]; if (last && last.ws === ws) last.list.unshift(m); else weeks.push({ ws, list: [m] }); });
+  let h = top() + `<main>`;
   if (st.matches.some(m => m.sample)) h += `<div class="msg sample"><span class="ms" aria-hidden="true">science</span><span><b>Sample data.</b> These matches are made up to show how the league works.</span></div>`;
   if (!weeks.length || weeks[0].ws !== thisWs) h += `<section class="week-now"><div class="sec-h"><h2>This week</h2></div><div class="empty">No matches yet this week.</div></section>`;
   weeks.forEach(wk => {
@@ -925,11 +982,11 @@ function renderLeagueMatches() {
 function renderLeague() {
   document.title = `League · ${SITE}`;
   const add = canScore() ? `<a class="icon-btn" href="#/league/add" aria-label="Add a match" title="Add a match"><span class="ms">add</span></a>` : "";
-  const top = sub => header("League", sub, { back: "#/", refresh: true, extra: add });
-  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top("") + `<div class="loading">Loading…</div>`; return; }
-  if (S.leagueError) { app.innerHTML = top("") + `<main>${leagueGateMsg()}</main>`; wire(); return; }
+  const top = () => pageTop([HOME], "League", "Big Games", { pill: "Eddie Hearn\u2019s", refresh: true, extra: add, photo: "img/heroes/league.webp", whole: true });
+  if (!S.leagueReady || !S.playersReady) { app.innerHTML = top() + `<div class="loading">Loading…</div>`; return; }
+  if (S.leagueError) { app.innerHTML = top() + `<main>${leagueGateMsg()}</main>`; wire(); return; }
   const st = leagueStats(), n = st.matches.length;
-  let h = top(n ? `${n} match${n === 1 ? "" : "es"} · ${st.playerRows.length} players` : "") + `<main class="has-nav">`;
+  let h = top() + `<main class="has-nav">`;
   if (S.notice) h += `<div class="msg${S.notice.err ? " err" : ""}">${esc(S.notice.t)}</div>`;
   if (st.matches.some(m => m.sample)) h += `<div class="msg sample"><span class="ms" aria-hidden="true">science</span><span><b>Sample data.</b> These matches are made up to show how the league works. Real results start soon.</span></div>`;
 
@@ -952,7 +1009,7 @@ function renderLeague() {
     if (n > RECENT_N) h += `<a class="more-link" href="#/league/matches">See all matches · ${n}<span class="ms" aria-hidden="true">chevron_right</span></a>`;
   }
   h += `</section>${footer(LEAGUE_FOOTER)}</main>`;
-  const tabs = [["players", "person", "Players"], ["pairs", "group", "Pairs"], ["matches", "sports_tennis", "Matches"]];
+  const tabs = [["players", "person", "Players"], ["pairs", "group", "Pairs"], ["matches", "scoreboard", "Matches"]];
   h += sectionNav(tabs);
   const y = scrollY;
   app.innerHTML = h; wire(); scrollTo(0, y);
@@ -972,11 +1029,16 @@ function recordPanel(r) {
   if (r.tbW + r.tbL) h += bar("Tiebreaks won", r.tbW, r.tbW + r.tbL);
   return h + `</div>`;
 }
+// Profile photos, matched by player name for now (lowercase). Anyone without one gets the placeholder.
+// Photos are 640px-wide transparent WebPs, cropped head-and-shoulders to match each other.
+const PHOTOS = { "mitch": "mitch", "cally": "cally", "chris c": "chris-c", "ben s": "ben-s" };
+const playerPhoto = id => { const f = PHOTOS[(pname(id) || "").trim().toLowerCase()]; return f ? `img/players/${f}.webp` : "img/player-default.webp"; };
+
 function renderPlayer(id) {
   const name = pname(id);
   document.title = `${name || "Player"} · ${SITE}`;
-  const top = header("Player", "", { back: "#/league" });
-  if (!S.playersReady || !S.leagueReady || !S.compsReady) { app.innerHTML = top + `<div class="loading">Loading…</div>`; return; }
+  const top = crumbs([HOME, ["#/league", "League"]], name || "Player");
+  if (!S.playersReady || !S.leagueReady) { app.innerHTML = top + `<div class="loading">Loading…</div>`; return; }
   if (!S.players[id]) { app.innerHTML = top + `<main><div class="empty">This player isn't in the list any more. <a href="#/league">Back to the league</a></div></main>`; wire(); return; }
   let h = top + `<main>`;
   if (S.leagueError) h += leagueGateMsg();
@@ -984,10 +1046,15 @@ function renderPlayer(id) {
   // Stat box: small icon top left, the stat large at the bottom, its label under it.
   const tile = (label, value, icon, hot) => `<div class="stat${hot ? " hot" : ""}"><span class="ms" aria-hidden="true">${icon}</span><b class="num">${value}</b><small>${label}</small></div>`;
 
-  // Hero: big name (with a flame when on fire), form underneath, then the rank.
+  // Hero: quick stats top left (rank "1/13" with the position large, then form; labels for screen readers only),
+  // photo bottom right on the purple glow and cage texture, big name (with a flame when on fire) along the bottom.
   const ranked = r && r.P >= LEAGUE_MIN;
-  const rankText = !r ? "Unranked" : ranked ? `Rank ${st.playerRows.indexOf(r) + 1}/${st.playerRows.filter(x => x.P >= LEAGUE_MIN).length}` : `Unranked · ${LEAGUE_MIN - r.P} more match${LEAGUE_MIN - r.P === 1 ? "" : "es"} to go`;
-  h += `<section class="p-hero"><p>${rankText}</p><h2>${esc(name)}${r ? fire(r) : ""}</h2>${r ? `<div class="form">${formDots(r.form)}</div>` : ""}</section>`;
+  const rankedN = st.playerRows.filter(x => x.P >= LEAGUE_MIN).length;
+  const rankVal = ranked ? `<b class="num">${st.playerRows.indexOf(r) + 1}</b><small class="num">/${rankedN}</small>` : `<b>–</b>`;
+  const qs = [["Rank", rankVal]];
+  if (r) qs.push(["Form", `<span class="form">${formDots(r.form)}</span>`]);
+  const quick = `<dl class="p-qs">${qs.map(([label, val]) => `<div><dt class="sr">${label}</dt><dd>${val}</dd></div>`).join("")}</dl>`;
+  h += `<section class="p-hero">${quick}<img class="p-photo" src="${playerPhoto(id)}" alt="" aria-hidden="true"><div class="p-id"><h2 style="--n:${Math.max(6, (name || "").length)}">${esc(name)}${r ? fire(r) : ""}</h2></div></section>`;
 
   h += `<section>`;
   if (!r) h += `<div class="empty">No league matches yet.</div>`;
@@ -996,13 +1063,13 @@ function renderPlayer(id) {
     const partners = Object.entries(r.partners).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || pname(a).localeCompare(pname(b)));
     const opps = Object.entries(r.opps).sort(([a, x], [b, y]) => y.P - x.P || y.L - x.L || pname(a).localeCompare(pname(b)));
     const courts = Object.entries(r.courts).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || a - b);
-    h += `<div class="stats two">`;
+    h += `</section><section><div class="sec-h"><h2>Big Stats</h2></div><div class="stats two">`;
     if (partners[0]) { const [pid, x] = partners[0]; h += tile("Favourite partner", plink(pid), "handshake"); }
     if (opps[0]) { const [pid, x] = opps[0]; h += tile("Biggest rival", plink(pid), "swords"); }
-    h += tile("Bagels served", r.bagS, "bakery_dining");
-    h += tile("Bagels eaten", r.bagE, "bakery_dining");
-    h += tile("Best win streak", r.best, "trending_up");
-    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", `Court ${esc(ct)}`, "location_on"); }
+    h += tile("Bagels served", r.bagS, "adjust");
+    h += tile("Bagels eaten", r.bagE, "adjust");
+    h += tile("Best win streak", r.best, "whatshot");
+    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", `Court ${esc(ct)}`, "pin"); }
     h += `</div>`;
     h += `</section><section><div class="sec-h"><h2>Partners</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">With</th><th>P</th><th>W</th><th>Win%</th></tr></thead><tbody>`
       + partners.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${pctText(x)}</td></tr>`).join("")
@@ -1010,17 +1077,14 @@ function renderPlayer(id) {
     h += `<section><div class="sec-h"><h2>Opponents</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">Against</th><th>P</th><th>W</th><th>L</th></tr></thead><tbody>`
       + opps.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${x.L}</td></tr>`).join("")
       + `</tbody></table></div></div></section>`;
-    const mine = st.matches.filter(m => m.a.includes(id) || m.b.includes(id)).slice(-10);
+    const allMine = st.matches.filter(m => m.a.includes(id) || m.b.includes(id)), mine = allMine.slice(-RECENT_N);
     h += `<section><div class="sec-h"><h2>Recent matches</h2><span>Last ${mine.length}</span></div>${leagueMatchBlocks(mine, false)}`;
+    if (allMine.length > RECENT_N) h += `<a class="more-link" href="#/p/${encodeURIComponent(id)}/matches">See all matches · ${allMine.length}<span class="ms" aria-hidden="true">chevron_right</span></a>`;
   }
   h += `</section>`;
 
-  // Competition record
-  const comps = sortedComps().filter(([, c]) => c.teams.some(t => t.p1 === id || t.p2 === id));
-  const won = comps.filter(([, c]) => { if (status(c) !== "done") return false; const t = standings(c)[0]?.t; return t && (t.p1 === id || t.p2 === id); });
-  h += `<section><div class="sec-h"><h2>Competitions</h2></div>`;
-  h += comps.length ? `<div class="stats two">${tile("Played", comps.length, "calendar_month")}${tile(won.length === 1 ? "Title" : "Titles", won.length, "trophy", won.length > 0)}</div>` : `<div class="empty">No competitions yet.</div>`;
-  h += `</section>${footer(LEAGUE_FOOTER)}</main>`;
+  // Competitions are left off the profile for now: it is league only.
+  h += `${footer(LEAGUE_FOOTER)}</main>`;
   app.innerHTML = h; wire();
 }
 
