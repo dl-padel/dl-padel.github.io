@@ -45,7 +45,7 @@ Casual padel competition app for Piers and friends at the local club. Live at ht
 - Standings: team names regular weight. Form guide is plain 12px dots: green `#00cc58` win, red `#ff4260` loss, grey draw.
 - All table rows 44px (10px padding, 24px line height). Every table has 16px padding at its left and right edges (first and last cell), 4–6px between cells; rank columns are 40px.
 - Lines: no lines between table rows or between the two sides of a match card. Instead, every card and table has a 1px `--card-line` (outline-var) border, table rows alternate with `--row-alt` (4% lighter), and the winners' row in a match card uses `--row-alt`. Only the match card footer keeps a top line, and league tables (`table.lt`) have a line under the header row.
-- Footer on public pages: divider (40px above, 60px below), © line, mock-serious small print, WhatsApp "Complaints department" link (group invite; keep "Approve new participants" on), then a subtle "Super secret admin area" link. No admin icon in the homepage header.
+- Footer on public pages: divider (40px above, 60px below), © line, mock-serious small print, WhatsApp "Complaints department" link (group invite; keep "Approve new participants" on; competitions pages use `WHATSAPP_URL`, league pages, profiles and match lists use `LEAGUE_WHATSAPP_URL`, the league group), then a subtle "Super secret admin area" link. No admin icon in the homepage header.
 - No streak badges or other extra labels in the table.
 - Keep row heights fixed so played and unplayed games space out the same.
 

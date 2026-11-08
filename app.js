@@ -280,12 +280,15 @@ async function playHero() {
   } catch { show(); }
 }
 // Footer for public pages: WhatsApp group link, mock-serious small print and a quiet link to admin.
-const WHATSAPP_URL = "https://chat.whatsapp.com/KwsMD6jcUIwKcm8NZJQboH"; // group invite link; keep "Approve new participants" on in WhatsApp
-function footer(secret = { href: "#/admin", text: "Super secret admin area" }) {
+// WhatsApp group invite links; keep "Approve new participants" on in WhatsApp.
+const WHATSAPP_URL = "https://chat.whatsapp.com/KwsMD6jcUIwKcm8NZJQboH"; // competitions group
+const LEAGUE_WHATSAPP_URL = "https://chat.whatsapp.com/GPt4rq7TLZH7YAeFgZf4xk"; // league group
+const LEAGUE_FOOTER = { href: "#/league/add", text: "Scorers' entrance", wa: LEAGUE_WHATSAPP_URL };
+function footer(secret = { href: "#/admin", text: "Super secret admin area", wa: WHATSAPP_URL }) {
   return `<footer class="foot"><hr>
 <p>© ${new Date().getFullYear()} DL Padel. All rights reserved.</p>
 <p>Results are final and binding, except when disputed loudly in the car park, or via WhatsApp. Any resemblance to professional padel is purely coincidental. No balls were harmed in the making of this site, though several were lost over the fence.</p>
-<a class="wa" href="${WHATSAPP_URL}" target="_blank" rel="noopener"><img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="" width="20" height="20">Complaints department</a>
+<a class="wa" href="${secret.wa}" target="_blank" rel="noopener"><img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="" width="20" height="20">Complaints department</a>
 <a class="secret" href="${secret.href}">${secret.text}</a></footer>`;
 }
 function wire() {
@@ -851,7 +854,7 @@ function renderLeagueTable(kind) {
   let h = top(`League · ${rows.length} ${kind} · ${isP ? "by win %" : "by wins"}`) + `<main>`;
   if (st.matches.some(m => m.sample)) h += `<div class="msg sample"><span class="ms" aria-hidden="true">science</span><span><b>Sample data.</b> These matches are made up to show how the league works.</span></div>`;
   h += `<section>${rows.length ? (isP ? playersTable(rows, Infinity, true) : pairsTable(rows, Infinity, true)) + `<p class="hint key">SF/SA sets won and lost · GF/GA games won and lost${isP ? ` · ranked by win %, then wins, set difference, game difference; ${LEAGUE_MIN} matches to be ranked` : " · ranked by wins, then win %, set difference, game difference"}</p>` : `<div class="empty">No matches yet.</div>`}</section>`;
-  h += `${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
+  h += `${footer(LEAGUE_FOOTER)}</main>`;
   const y = scrollY;
   app.innerHTML = h; wire(); scrollTo(0, y);
 }
@@ -888,7 +891,7 @@ function renderLeagueMatches() {
     if (wk.ws === thisWs) h += `<section class="week-now"><div class="sec-h"><h2>${label}</h2><span>${count}</span></div>${leagueMatchBlocks(wk.list, canScore())}</section>`;
     else h += `<details class="week" data-w="${wk.ws}"${S.openWeeks.has(wk.ws) ? " open" : ""}><summary><span class="wk-t">${label}</span><span class="wk-n">${count}</span><span class="ms" aria-hidden="true">expand_more</span></summary><div class="week-body">${leagueMatchBlocks(wk.list, canScore())}</div></details>`;
   });
-  h += `${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
+  h += `${footer(LEAGUE_FOOTER)}</main>`;
   const y = scrollY;
   app.innerHTML = h; wire(); scrollTo(0, y);
   app.querySelectorAll("details.week").forEach(d => d.addEventListener("toggle", () => { d.open ? S.openWeeks.add(d.dataset.w) : S.openWeeks.delete(d.dataset.w); }));
@@ -923,7 +926,7 @@ function renderLeague() {
     h += leagueMatchBlocks(st.matches.slice(-RECENT_N), canScore());
     if (n > RECENT_N) h += `<a class="more-link" href="#/league/matches">See all matches · ${n}<span class="ms" aria-hidden="true">chevron_right</span></a>`;
   }
-  h += `</section>${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
+  h += `</section>${footer(LEAGUE_FOOTER)}</main>`;
   const tabs = [["players", "person", "Players"], ["pairs", "group", "Pairs"], ["matches", "sports_tennis", "Matches"]];
   h += sectionNav(tabs);
   const y = scrollY;
@@ -992,7 +995,7 @@ function renderPlayer(id) {
   const won = comps.filter(([, c]) => { if (status(c) !== "done") return false; const t = standings(c)[0]?.t; return t && (t.p1 === id || t.p2 === id); });
   h += `<section><div class="sec-h"><h2>Competitions</h2></div>`;
   h += comps.length ? `<div class="stats two">${tile("Played", comps.length, "calendar_month")}${tile(won.length === 1 ? "Title" : "Titles", won.length, "trophy", won.length > 0)}</div>` : `<div class="empty">No competitions yet.</div>`;
-  h += `</section>${footer({ href: "#/league/add", text: "Scorers' entrance" })}</main>`;
+  h += `</section>${footer(LEAGUE_FOOTER)}</main>`;
   app.innerHTML = h; wire();
 }
 
