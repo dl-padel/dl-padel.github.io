@@ -981,6 +981,7 @@ function renderLeagueMatches(pid) {
 
 function renderLeague() {
   document.title = `League · ${SITE}`;
+  preloadPlayerPhotos();
   const add = canScore() ? `<a class="icon-btn" href="#/league/add" aria-label="Add a match" title="Add a match"><span class="ms">add</span></a>` : "";
   const top = () => pageTop([HOME], "League", "Big Games", { pill: "Eddie Hearn\u2019s", refresh: true, extra: add, photo: "img/heroes/league.webp", whole: true });
   if (!S.leagueReady || !S.playersReady) { app.innerHTML = top() + `<div class="loading">Loading…</div>`; return; }
@@ -1033,6 +1034,15 @@ function recordPanel(r) {
 // Photos are 640px-wide transparent WebPs, cropped head-and-shoulders to match each other.
 const PHOTOS = { "mitch": "mitch", "cally": "cally", "chris c": "chris-c", "ben s": "ben-s" };
 const playerPhoto = id => { const f = PHOTOS[(pname(id) || "").trim().toLowerCase()]; return f ? `img/players/${f}.webp` : "img/player-default.webp"; };
+// Fetch every player photo in the background (they're small) so profiles open with the photo ready.
+// The Image objects are kept so the downloads finish even if the page redraws.
+const photoCache = [];
+function preloadPlayerPhotos() {
+  if (photoCache.length) return;
+  for (const src of [...new Set([...Object.values(PHOTOS).map(f => `img/players/${f}.webp`), "img/player-default.webp"])]) {
+    const i = new Image(); i.decoding = "async"; i.src = src; photoCache.push(i);
+  }
+}
 
 function renderPlayer(id) {
   const name = pname(id);
@@ -1054,7 +1064,7 @@ function renderPlayer(id) {
   const qs = [["Rank", rankVal]];
   if (r) qs.push(["Form", `<span class="form">${formDots(r.form)}</span>`]);
   const quick = `<dl class="p-qs">${qs.map(([label, val]) => `<div><dt class="sr">${label}</dt><dd>${val}</dd></div>`).join("")}</dl>`;
-  h += `<section class="p-hero">${quick}<img class="p-photo" src="${playerPhoto(id)}" alt="" aria-hidden="true"><div class="p-id"><h2 style="--n:${Math.max(6, (name || "").length)}">${esc(name)}${r ? fire(r) : ""}</h2></div></section>`;
+  h += `<section class="p-hero">${quick}<img class="p-photo" src="${playerPhoto(id)}" alt="" aria-hidden="true" fetchpriority="high" decoding="async"><div class="p-id"><h2 style="--n:${Math.max(6, (name || "").length)}">${esc(name)}${r ? fire(r) : ""}</h2></div></section>`;
 
   h += `<section>`;
   if (!r) h += `<div class="empty">No league matches yet.</div>`;
@@ -1085,7 +1095,13 @@ function renderPlayer(id) {
 
   // Competitions are left off the profile for now: it is league only.
   h += `${footer(LEAGUE_FOOTER)}</main>`;
-  app.innerHTML = h; wire();
+  // Keep the already-loading (or loaded) photo across live redraws: replacing the <img>
+  // can make Safari cancel and restart the download, which left photos blank for 10-20s.
+  const oldPhoto = app.querySelector(".p-hero .p-photo");
+  app.innerHTML = h;
+  const newPhoto = app.querySelector(".p-hero .p-photo");
+  if (oldPhoto && newPhoto && oldPhoto.getAttribute("src") === newPhoto.getAttribute("src")) newPhoto.replaceWith(oldPhoto);
+  wire();
 }
 
 // ----- Add or edit a league match (scorers and admins) -----
