@@ -275,3 +275,9 @@ table tr.sep > td{padding-left:16px;padding-right:16px}
 .rp-v small{font-size:13px;margin-left:8px;color:var(--on-surface);font-weight:600}
 .rp-bar{height:6px;border-radius:3px;background:var(--surface-3);margin-top:8px;overflow:hidden}
 .rp-bar span{display:block;height:100%;border-radius:3px;background:var(--ball)}
+
+/* Admin weekly recap */
+.recap-nav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.recap-nav b{font-size:16px;font-weight:600}
+.recap-nav .icon-btn:disabled{opacity:.3;cursor:default}
+pre.recap{margin:0;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--card-line);font:inherit;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}

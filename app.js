@@ -489,6 +489,24 @@ function renderAdmin() {
 
   ensureLeague();
   const nSample = sampleIds().length, nPlayers = Object.keys(S.players).length;
+  // Weekly recap to share in the league WhatsApp group (admins only).
+  if (S.leagueReady && !S.leagueError) {
+    const weeks = [...new Set(leagueMatches().map(m => weekStart(m.date)))].sort();
+    const thisWs = weekStart(todayISO());
+    if (!S.recapWs) S.recapWs = weeks.includes(thisWs) || !weeks.length ? thisWs : weeks[weeks.length - 1];
+    const text = weeklyRecap(S.recapWs), shift = d => { const x = new Date(S.recapWs + "T12:00:00"); x.setDate(x.getDate() + d); return weekStart(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`); };
+    h += `<section><div class="sec-h"><h2>Weekly league recap</h2></div><div class="card">`;
+    h += `<div class="recap-nav"><button class="icon-btn" id="rc-prev" aria-label="Previous week"><span class="ms">chevron_left</span></button><b>${esc(weekLabel(S.recapWs, thisWs))}</b><button class="icon-btn" id="rc-next" aria-label="Next week"${S.recapWs >= thisWs ? " disabled" : ""}><span class="ms">chevron_right</span></button></div>`;
+    if (!text) h += `<p class="hint">No league matches that week.</p>`;
+    else {
+      if (leagueMatches().some(m => m.sample && weekStart(m.date) === S.recapWs)) h += `<p class="hint">Heads up: this week includes sample data.</p>`;
+      h += `<pre class="recap">${esc(text)}</pre><div class="row"><a class="btn filled" href="https://wa.me/?text=${encodeURIComponent(text)}" target="_blank" rel="noopener"><span class="ms">share</span>Share to WhatsApp</a><button class="btn tonal" id="rc-copy"><span class="ms">content_copy</span>Copy</button></div>`;
+      h += `<p class="hint">Opens WhatsApp with the message ready. Pick the league group and send.</p>`;
+    }
+    h += `</div></section>`;
+    S.recapShift = shift;
+  }
+
   h += `<section><div class="sec-h"><h2>League sample data</h2></div><div class="card">`;
   if (!S.leagueReady) h += `<p class="hint">Loading…</p>`;
   else if (S.leagueError) h += `<p class="hint">Couldn't load the league (${esc(S.leagueError.code || "error")}).</p>`;
@@ -505,6 +523,12 @@ function renderAdmin() {
     try { const n = await fn(); S.notice = { t: ok(n) }; } catch (err) { S.notice = { err: true, t: `Couldn't do that (${err.code || err.message}).` }; }
     render(); scrollTo(0, 0);
   }; };
+  const rp = document.getElementById("rc-prev"); if (rp) rp.onclick = () => { S.recapWs = S.recapShift(-7); renderAdmin(); };
+  const rn = document.getElementById("rc-next"); if (rn) rn.onclick = () => { S.recapWs = S.recapShift(7); renderAdmin(); };
+  const rc = document.getElementById("rc-copy"); if (rc) rc.onclick = async () => {
+    try { await navigator.clipboard.writeText(weeklyRecap(S.recapWs)); rc.innerHTML = '<span class="ms">check</span>Copied'; }
+    catch { rc.textContent = "Couldn't copy"; }
+  };
   sampleBtn(document.getElementById("addsample"), loadSampleLeague, n => `Added ${n} sample matches. Have a look at the league.`);
   sampleBtn(document.getElementById("newsample"), loadSampleLeague, n => `Swapped in a new sample set of ${n} matches, with times and courts.`);
   sampleBtn(document.getElementById("rmsample"), removeSampleLeague, n => `Removed ${n} sample matches.`);
@@ -759,8 +783,9 @@ function addResult(r, won, s, side) {
   r.curL = won ? 0 : r.curL + 1; r.bestL = Math.max(r.bestL, r.curL);
 }
 // Everything the league pages show, worked out from the full match list.
-function leagueStats() {
-  const players = {}, pairs = {}, matches = leagueMatches();
+// With `until` ("YYYY-MM-DD"), only matches played up to and including that day count.
+function leagueStats(until) {
+  const players = {}, pairs = {}, matches = leagueMatches().filter(m => !until || (m.date || "") <= until);
   const P = id => players[id] ||= blankRow({ id, partners: {}, opps: {}, courts: {} });
   matches.forEach(m => {
     const s = matchScore(m);
@@ -1147,6 +1172,64 @@ async function saveLeagueMatch(id) {
   }
 }
 
+
+// ----- Weekly league recap (admin only) -----
+// A WhatsApp-ready summary of one Monday-to-Sunday week. Returns "" if no matches.
+const SITE_URL = "https://dl-padel.github.io";
+function weeklyRecap(ws) {
+  const we = (() => { const d = new Date(ws + "T12:00:00"); d.setDate(d.getDate() + 6); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+  const week = leagueMatches().filter(m => m.date >= ws && m.date <= we);
+  if (!week.length) return "";
+  const pair = ids => ids.map(pname).join(" & ");
+  const score = (m, aWon) => m.sets.map(st => { const [w, l, tw, tl] = aWon ? [st.a, st.b, st.ta, st.tb] : [st.b, st.a, st.tb, st.ta]; return `${w}-${l}${tw != null && tl != null ? `(${Math.min(tw, tl)})` : ""}`; }).join(" ");
+  const line = m => { const s = matchScore(m), aWon = s.aWon; return `${pair(aWon ? m.a : m.b)} beat ${pair(aWon ? m.b : m.a)} ${score(m, aWon)}`; };
+  const after = leagueStats(we), dayBefore = (() => { const d = new Date(ws + "T12:00:00"); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+  const before = leagueStats(dayBefore);
+  const rankOf = (st, id) => { const q = st.playerRows.filter(r => r.P >= LEAGUE_MIN); const i = q.findIndex(r => r.id === id); return i < 0 ? null : i + 1; };
+  const lines = [];
+  const a = new Date(ws + "T12:00:00"), b = new Date(we + "T12:00:00"), f = x => `${x.getDate()} ${MONTHS[x.getMonth()]}`;
+  lines.push(`🎾 *DL Padel League: ${a.getMonth() === b.getMonth() ? `${a.getDate()}–${f(b)}` : `${f(a)} – ${f(b)}`}*`);
+  const people = new Set(week.flatMap(m => [...m.a, ...m.b]));
+  lines.push(`${week.length} match${week.length === 1 ? "" : "es"} played by ${people.size} players`);
+
+  // Top of the table, with movement since the start of the week
+  const top = after.playerRows.filter(r => r.P >= LEAGUE_MIN).slice(0, 3);
+  if (top.length) {
+    lines.push("", "🏆 *Top of the table*");
+    top.forEach((r, i) => {
+      const was = rankOf(before, r.id), move = was == null ? " (new)" : was > i + 1 ? ` ⬆️${was - i - 1}` : was < i + 1 ? ` ⬇️${i + 1 - was}` : "";
+      lines.push(`${i + 1}. ${pname(r.id)}: ${r.W}/${r.P} won (${pctText(r)})${r.cur >= FIRE_STREAK ? " 🔥" : ""}${move}`);
+    });
+    const climbs = after.playerRows.filter(r => r.P >= LEAGUE_MIN).map(r => ({ id: r.id, up: (rankOf(before, r.id) ?? 0) - rankOf(after, r.id) })).filter(x => rankOf(before, x.id) != null && x.up > 0).sort((x, y) => y.up - x.up);
+    if (climbs[0] && climbs[0].up >= 2) lines.push(`📈 Biggest climber: ${pname(climbs[0].id)}, up ${climbs[0].up} places`);
+  }
+
+  // Player of the week: most wins this week, then fewest losses, then game difference
+  const wk = {};
+  week.forEach(m => { const s = matchScore(m); [["a", m.a], ["b", m.b]].forEach(([side, ids]) => ids.forEach(id => {
+    const r = wk[id] ||= { id, W: 0, P: 0, GD: 0 }; const won = side === "a" ? s.aWon : !s.aWon;
+    r.P++; if (won) r.W++; r.GD += side === "a" ? s.ga - s.gb : s.gb - s.ga; })); });
+  const potw = Object.values(wk).sort((x, y) => y.W - x.W || (y.W / y.P) - (x.W / x.P) || y.GD - x.GD)[0];
+  lines.push("");
+  if (potw && potw.W) lines.push(`⭐ *Player of the week:* ${pname(potw.id)}, ${potw.W} win${potw.W === 1 ? "" : "s"} from ${potw.P}`);
+  const gd = m => { const s = matchScore(m); return Math.abs(s.ga - s.gb); };
+  const biggest = week.slice().sort((x, y) => gd(y) - gd(x))[0];
+  lines.push(`💥 *Biggest win:* ${line(biggest)}`);
+  const close = week.filter(m => m !== biggest).sort((x, y) => (y.sets.length - x.sets.length) || gd(x) - gd(y))[0];
+  if (close) lines.push(`😬 *Closest match:* ${line(close)}`);
+
+  // Streaks, bagels and tiebreaks
+  const fire = after.playerRows.filter(r => r.cur >= FIRE_STREAK).sort((x, y) => y.cur - x.cur);
+  if (fire.length) lines.push(`🔥 *On fire:* ${fire.map(r => `${pname(r.id)} (${r.cur} in a row)`).join(", ")}`);
+  const bagels = [];
+  week.forEach(m => m.sets.forEach(st => { if (isBagel(st.b, st.a)) bagels.push(`${pair(m.a)} served one to ${pair(m.b)}`); if (isBagel(st.a, st.b)) bagels.push(`${pair(m.b)} served one to ${pair(m.a)}`); }));
+  if (bagels.length) lines.push(`🥯 *Bagels:* ${bagels.join("; ")}`);
+  const tbs = week.flatMap(m => m.sets).filter(st => st.ta != null && st.tb != null).length;
+  if (tbs) lines.push(`🎯 *Tiebreaks:* ${tbs} played`);
+
+  lines.push("", `📊 Full table: ${SITE_URL}/#/league`);
+  return lines.join("\n");
+}
 
 // ----- Sample league data (admin only) -----
 // Made-up matches to show people how the league looks. Every one is tagged
