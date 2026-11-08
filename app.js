@@ -262,7 +262,7 @@ function pageTop(trail, here, title, o = {}) {
   if (o.admin) acts += `<a class="icon-btn" href="${o.admin}" aria-label="Admin" title="Admin"><span class="ms">edit_square</span></a>`;
   if (o.extra) acts += o.extra;
   const t = title || "";
-  return crumbs(trail, here, acts) + `<header class="pg-hero${o.photo ? " has-photo" : ""}">${o.photo ? `<img class="pg-photo${o.whole ? " whole" : ""}" src="${o.photo}" alt="" aria-hidden="true">` : ""}${o.pill ? `<p class="pg-pill"><span class="chip ball">${esc(o.pill)}</span></p>` : ""}<h1 style="--n:${Math.max(6, t.length)}">${esc(t)}</h1>${o.sub ? `<div class="pg-sub">${o.sub}</div>` : ""}</header>`;
+  return crumbs(trail, here, acts) + `<header class="pg-hero${o.photo ? " has-photo" : ""}">${o.photo ? `<img class="pg-photo${o.whole ? " whole" : ""}${o.wide ? " wide" : ""}" src="${o.photo}" alt="" aria-hidden="true">` : ""}${o.pill ? `<p class="pg-pill"><span class="chip ball">${esc(o.pill)}</span></p>` : ""}<h1 style="--n:${Math.max(6, t.length)}">${esc(t)}</h1>${o.sub ? `<div class="pg-sub">${o.sub}</div>` : ""}</header>`;
 }
 const HOME = ["#/", "Home"];
 // Homepage hero: the club logo, centred. Replaces the top bar on the homepage.
@@ -926,7 +926,7 @@ const moreLink = (href, total, what) => total > TOP_N ? `<a class="more-link" hr
 function renderLeagueTable(kind) {
   const isP = kind === "players", title = isP ? "Players" : "Pairs";
   document.title = `${title} · League · ${SITE}`;
-  const top = () => pageTop([HOME, ["#/league", "League"]], title, title, { refresh: true, photo: `img/heroes/${kind}.webp` });
+  const top = () => pageTop([HOME, ["#/league", "League"]], title, title, { refresh: true, photo: `img/heroes/${kind}.webp`, wide: kind === "pairs" });
   if (!S.leagueReady || !S.playersReady) { app.innerHTML = top() + `<div class="loading">Loading…</div>`; return; }
   if (S.leagueError) { app.innerHTML = top() + `<main>${leagueGateMsg()}</main>`; wire(); return; }
   const st = leagueStats(), rows = isP ? st.playerRows : st.pairRows;

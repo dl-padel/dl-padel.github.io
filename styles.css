@@ -221,6 +221,8 @@ tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color
 .pg-photo{position:absolute;right:20px;bottom:0;z-index:-1;height:230px;width:auto;max-width:56%;object-fit:contain;object-position:right bottom;pointer-events:none;user-select:none;-webkit-mask-image:linear-gradient(to bottom,#000 55%,transparent 100%);mask-image:linear-gradient(to bottom,#000 55%,transparent 100%)}
 /* Whole objects (League trophy and racket): no bottom fade, lifted slightly off the bottom edge */
 .pg-photo.whole{-webkit-mask-image:none;mask-image:none;bottom:12px;height:210px}
+/* Wide landscape photos (Pairs): allowed almost the full hero width so the people match the Players photo in size; it sits behind the title */
+.pg-photo.wide{height:260px;max-width:94%;right:8px}
 .p-hero + section{position:relative;z-index:1}
 .stat.hot{background:var(--ball);border-color:var(--ball);color:var(--on-ball)}
 .stat.hot > .ms,.stat.hot small{color:var(--on-ball)}
