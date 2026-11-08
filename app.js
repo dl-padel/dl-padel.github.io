@@ -993,13 +993,13 @@ function renderLeague() {
   // Players: ranked by win %, once they've played enough to count.
   h += `<section id="players"><div class="sec-h"><h2>Players</h2><span>By win %</span></div>`;
   if (!n) h += `<div class="empty">No matches yet. ${canScore() ? `Tap <b>+</b> to add the first one.` : "The table fills in as matches are added."}</div>`;
-  else h += playersTable(st.playerRows, TOP_N) + moreLink("#/league/players", st.playerRows.length, "players");
+  else h += playersTable(st.playerRows, TOP_N, true) + moreLink("#/league/players", st.playerRows.length, "players");
   h += `</section>`;
 
   // Pairs: ranked by total wins.
   h += `<section id="pairs"><div class="sec-h"><h2>Pairs</h2><span>By wins</span></div>`;
   if (!n) h += `<div class="empty">Pairs appear here once they've played.</div>`;
-  else h += pairsTable(st.pairRows, TOP_N) + moreLink("#/league/pairs", st.pairRows.length, "pairs");
+  else h += pairsTable(st.pairRows, TOP_N, true) + moreLink("#/league/pairs", st.pairRows.length, "pairs");
   h += `</section>`;
 
   h += `<section id="matches"><div class="sec-h"><h2>Matches</h2><span>${n > RECENT_N ? `Last ${RECENT_N}` : "Latest first"}</span></div>`;
