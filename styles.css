@@ -335,3 +335,6 @@ pre.recap{margin:0;padding:12px 14px;border-radius:12px;background:var(--surface
 .p-qs dd small{font-size:16px;color:var(--on-surface-var);margin-left:2px}
 .p-qs .form{gap:6px}
 .p-qs .fchip{width:10px;height:10px}
+/* Pinned rank column must be exactly 40px so the pinned name column (left:40px)
+   sits flush against it; otherwise scrolled numbers show through the gap. */
+table.lt.full th.pos,table.lt.full td.pos{width:40px;min-width:40px;max-width:40px}
