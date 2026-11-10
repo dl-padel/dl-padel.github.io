@@ -84,6 +84,7 @@ function onData(kind) {
   // Don't overwrite an admin's unsaved edits with incoming data.
   if (r.name === "editComp" && S.draft) { if (kind === "players") render(); return; }
   if (r.name === "leagueEdit" && S.ldraft) { if (kind === "players") render(); return; }
+  if (r.name === "teamPicker") return; // nothing on it depends on live data; a redraw would interrupt typing
   render();
 }
 
@@ -198,6 +199,7 @@ function route() {
   if (p[0] === "comps") return { name: "comps" };
   if (p[0] === "league" && (p[1] === "players" || p[1] === "pairs")) return { name: "leagueTable", kind: p[1] };
   if (p[0] === "league" && p[1] === "matches") return { name: "leagueMatches" };
+  if (p[0] === "league" && p[1] === "random") return { name: "teamPicker" };
   if (p[0] === "league" && p[1] === "add") return { name: "leagueEdit", id: "new" };
   if (p[0] === "league" && p[1] === "m" && p[2]) return { name: "leagueEdit", id: p[2] };
   if (p[0] === "league") return { name: "league" };
@@ -233,6 +235,7 @@ function render() {
   if (r.name === "league") { ensureLeague(); return renderLeague(); }
   if (r.name === "leagueTable") { ensureLeague(); return renderLeagueTable(r.kind); }
   if (r.name === "leagueMatches") { ensureLeague(); return renderLeagueMatches(r.pid); }
+  if (r.name === "teamPicker") return renderTeamPicker();
   if (r.name === "leagueEdit") { ensureLeague(); return renderLeagueEdit(r.id); }
   if (r.name === "player") { ensureLeague(); return renderPlayer(r.id); }
   return renderHome();
@@ -1009,12 +1012,62 @@ function renderLeague() {
     h += leagueMatchBlocks(st.matches.slice(-RECENT_N), canScore());
     if (n > RECENT_N) h += `<a class="more-link" href="#/league/matches">See all matches · ${n}<span class="ms" aria-hidden="true">chevron_right</span></a>`;
   }
+  h += `</section><section><a class="comp-card" href="#/league/random"><div class="card-main"><h3>Team picker</h3><div class="card-lines"><span class="card-line"><span class="ms" aria-hidden="true">shuffle</span>Pop in 4 names, get a random match-up</span></div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
   h += `</section>${footer(LEAGUE_FOOTER)}</main>`;
   const tabs = [["players", "person", "Players"], ["pairs", "group", "Pairs"], ["matches", "scoreboard", "Matches"]];
   h += sectionNav(tabs);
   const y = scrollY;
   app.innerHTML = h; wire(); scrollTo(0, y);
   wireSectionNav(tabs);
+}
+
+// ----- Team picker -----
+// Type four names, tap Randomise, get a random doubles match-up. Nothing is saved to the database;
+// the names are remembered on this device for next time.
+const PICK_KEY = "dlp-team-picker";
+function pickerNames() {
+  if (!S.pick) { let saved = null; try { saved = JSON.parse(localStorage.getItem(PICK_KEY) || "null"); } catch {} S.pick = { names: Array.isArray(saved) && saved.length === 4 ? saved.map(String) : ["", "", "", ""], pairing: null, flip: false, err: "" }; }
+  return S.pick;
+}
+// The three ways to split four players into two pairs, as indexes: [[a, b], [c, d]].
+const PAIRINGS = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
+function renderTeamPicker() {
+  document.title = `Team picker · ${SITE}`;
+  const P = pickerNames();
+  let h = pageTop([HOME, ["#/league", "League"]], "Team picker", "Team picker") + `<main class="picker">`;
+  h += `<section><div class="card pk-card"><datalist id="pk-players">${Object.values(S.players).map(p => p.name).sort((a, b) => a.localeCompare(b)).map(n => `<option value="${esc(n)}">`).join("")}</datalist>`;
+  h += `<div class="pk-grid">${P.names.map((n, i) => `<div class="field"><label for="pk${i}">Player ${i + 1}</label><input id="pk${i}" data-i="${i}" value="${esc(n)}" list="pk-players" autocomplete="off" autocapitalize="words" placeholder="Name"></div>`).join("")}</div>`;
+  if (P.err) h += `<p class="msg err">${esc(P.err)}</p>`;
+  h += `<div class="row"><button class="btn filled" id="pk-go"><span class="ms">shuffle</span>${P.pairing === null ? "Randomise" : "Randomise again"}</button><button class="btn text" id="pk-clear">Clear names</button></div></div></section>`;
+  if (P.pairing !== null) {
+    const [x, y] = PAIRINGS[P.pairing], teams = P.flip ? [y, x] : [x, y];
+    const team = (t, n) => `<div class="pk-team"><small>Team ${n}</small><b>${esc(P.names[t[0]].trim())} &amp; ${esc(P.names[t[1]].trim())}</b></div>`;
+    h += `<section aria-live="polite"><div class="card pk-result">${team(teams[0], 1)}<div class="pk-vs">VS</div>${team(teams[1], 2)}</div></section>`;
+  }
+  h += `${footer(LEAGUE_FOOTER)}</main>`;
+  app.innerHTML = h; wire();
+  app.querySelectorAll(".pk-grid input").forEach(inp => inp.oninput = () => {
+    P.names[+inp.dataset.i] = inp.value;
+    try { localStorage.setItem(PICK_KEY, JSON.stringify(P.names)); } catch {}
+  });
+  document.getElementById("pk-go").onclick = () => {
+    const names = P.names.map(n => n.trim());
+    if (names.some(n => !n)) P.err = "Pop a name in all four boxes first.";
+    else if (new Set(names.map(n => n.toLowerCase())).size < 4) P.err = "Someone's in there twice. Use four different names.";
+    else {
+      P.err = "";
+      // Always a different split from the one showing, so tapping again never repeats the match-up.
+      const options = [0, 1, 2].filter(k => k !== P.pairing);
+      P.pairing = options[Math.floor(Math.random() * options.length)];
+      P.flip = Math.random() < .5;
+    }
+    renderTeamPicker();
+  };
+  document.getElementById("pk-clear").onclick = () => {
+    P.names = ["", "", "", ""]; P.pairing = null; P.err = "";
+    try { localStorage.removeItem(PICK_KEY); } catch {}
+    renderTeamPicker(); document.getElementById("pk0")?.focus();
+  };
 }
 
 // ----- Player profile -----

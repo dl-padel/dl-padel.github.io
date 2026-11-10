@@ -340,3 +340,13 @@ pre.recap{margin:0;padding:12px 14px;border-radius:12px;background:var(--surface
 /* Pinned rank column must be exactly 40px so the pinned name column (left:40px)
    sits flush against it; otherwise scrolled numbers show through the gap. */
 table.lt.full th.pos,table.lt.full td.pos{width:40px;min-width:40px;max-width:40px}
+
+/* Team picker (#/league/random) */
+.pk-card{padding:16px;display:flex;flex-direction:column;gap:14px}
+.pk-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pk-card .msg{margin:0}
+.pk-result{padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.pk-team{display:flex;flex-direction:column;gap:2px}
+.pk-team small{font-size:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--on-surface-var)}
+.pk-team b{font-size:22px;font-weight:600;line-height:28px}
+.pk-vs{font-family:var(--display);font-style:italic;font-weight:900;font-size:28px;line-height:1;color:var(--ball);letter-spacing:.02em}
