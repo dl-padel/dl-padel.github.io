@@ -1012,7 +1012,7 @@ function renderLeague() {
     h += leagueMatchBlocks(st.matches.slice(-RECENT_N), canScore());
     if (n > RECENT_N) h += `<a class="more-link" href="#/league/matches">See all matches · ${n}<span class="ms" aria-hidden="true">chevron_right</span></a>`;
   }
-  h += `</section><section><a class="comp-card" href="#/league/random"><div class="card-main"><h3>Team picker</h3><div class="card-lines"><span class="card-line"><span class="ms" aria-hidden="true">shuffle</span>Pop in 4 names, get a random match-up</span></div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a>`;
+  h += `</section><section id="extras"><div class="sec-h"><h2>Extras</h2></div><div class="comp-list"><a class="comp-card" href="#/league/random"><div class="card-main"><h3>Team picker</h3><div class="card-lines"><span class="card-line"><span class="ms" aria-hidden="true">shuffle</span>Pop in 4 names, get a random match-up</span></div></div><span class="ms chev" aria-hidden="true">chevron_right</span></a></div>`;
   h += `</section>${footer(LEAGUE_FOOTER)}</main>`;
   const tabs = [["players", "person", "Players"], ["pairs", "group", "Pairs"], ["matches", "scoreboard", "Matches"]];
   h += sectionNav(tabs);
