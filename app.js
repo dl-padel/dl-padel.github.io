@@ -1117,7 +1117,7 @@ function renderPlayer(id) {
   const qs = [["Rank", rankVal]];
   if (r) qs.push(["Form", `<span class="form">${formDots(r.form)}</span>`]);
   const quick = `<dl class="p-qs">${qs.map(([label, val]) => `<div><dt class="sr">${label}</dt><dd>${val}</dd></div>`).join("")}</dl>`;
-  h += `<section class="p-hero">${quick}<img class="p-photo" src="${playerPhoto(id)}" alt="" aria-hidden="true" fetchpriority="high" decoding="async"><div class="p-id"><h2 style="--n:${Math.max(6, (name || "").length)}">${esc(name)}</h2></div></section>`;
+  h += `<section class="p-hero">${quick}<img class="p-photo${playerPhoto(id).includes("player-default") ? " default" : ""}" src="${playerPhoto(id)}" alt="" aria-hidden="true" fetchpriority="high" decoding="async"><div class="p-id"><h2 style="--n:${Math.max(6, (name || "").length)}">${esc(name)}</h2></div></section>`;
 
   h += `<section>`;
   if (!r) h += `<div class="empty">No league matches yet.</div>`;
