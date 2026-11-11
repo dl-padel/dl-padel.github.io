@@ -312,8 +312,24 @@ function footer(secret = { href: "#/admin", text: "Super secret admin area", wa:
 function wire() {
   const r = document.getElementById("refresh");
   if (r) r.onclick = () => { r.classList.add("spin"); setTimeout(() => location.reload(), 250); };
+  fitStats();
   animateIn();
 }
+
+// ----- Stat box values: as big as possible (up to 56px), shrunk only when a long name wouldn't fit on one line -----
+const STAT_MAX = 56;
+function fitStats() {
+  app.querySelectorAll(".stat b").forEach(b => {
+    b.style.fontSize = STAT_MAX + "px";
+    const r = document.createRange(); r.selectNodeContents(b);
+    if (!r.getBoundingClientRect) return; // very old browsers: keep 56px
+    const w = r.getBoundingClientRect().width, avail = b.clientWidth;
+    if (w > avail && avail > 0) b.style.fontSize = Math.floor(STAT_MAX * avail / w) + "px";
+  });
+}
+// Re-fit once Kanit has loaded (first paint may use the fallback font) and when the screen size changes.
+document.fonts?.ready.then(fitStats);
+let fitTimer; addEventListener("resize", () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitStats, 100); });
 
 // ----- Entrance animation -----
 // Sections fade up as they come into view; record bars grow and big numbers count up.

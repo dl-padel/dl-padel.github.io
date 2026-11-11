@@ -181,7 +181,8 @@ tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color
 /* Stat boxes: icon top left, big stat bottom left with its label underneath */
 .stat{background:var(--surface-1);border-radius:16px;padding:12px 14px 14px;display:flex;flex-direction:column;min-width:0;min-height:136px}
 .stat > .ms{font-size:28px;width:28px;height:28px;line-height:28px;color:var(--ball);font-variation-settings:"FILL" 1;margin-bottom:auto}
-.stat b{font-size:26px;font-weight:700;line-height:32px;margin-top:12px;min-height:32px;display:flex;align-items:center}
+/* Stat value: 56px, shrunk per box by fitStats() in app.js only when a long name would not fit on one line */
+.stat b{font-size:56px;font-weight:700;line-height:1.1;margin-top:12px;min-height:62px;display:flex;align-items:flex-end;white-space:nowrap}
 .stat small{font-size:12px;line-height:16px;color:var(--on-surface-var);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat .form{padding:0;gap:4px}
 .stats.two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}
