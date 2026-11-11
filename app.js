@@ -370,7 +370,7 @@ function animateIn() {
     el.classList.add("in");
     setTimeout(() => {
       el.querySelectorAll(".rp-bar span").forEach(b => { b.style.width = b.dataset.w; });
-      el.querySelectorAll("b[data-n]").forEach(countUp);
+      el.querySelectorAll("[data-n]").forEach(countUp);
     }, 150 + Math.min(shown, 5) * 70);
   }), { rootMargin: "0px 0px -40px 0px" });
   items.forEach(el => { el.classList.add("rise"); io.observe(el); });
