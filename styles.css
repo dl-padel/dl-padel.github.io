@@ -189,11 +189,23 @@ tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color
 .stat b .plink{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stat b{min-width:0}
 /* Profile hero: big name, form, rank */
-/* Profile hero: photo bottom-right; purple glow and cage texture are centred on the card's top edge under the photo, so they read as a semicircle rising from the card; quick stats top left, name along the bottom.
-   The hero ends exactly where the record panel starts (negative margin cancels main's 28px gap). */
-.p-hero{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;min-height:240px;margin:0 -16px -28px;padding:16px 0 0;background:radial-gradient(circle 240px at calc(75% - 32px) 100%,rgba(140,60,255,.28),rgba(140,60,255,0))}
-.p-hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22%3E%3Cg opacity=%22.1%22 fill=%22%23d5baff%22%3E%3Cpath d=%22M24 0H0V24%22 fill=%22none%22 stroke=%22%23d5baff%22 stroke-width=%221.2%22/%3E%3Ccircle cx=%220%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%220%22 cy=%2224%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%2224%22 r=%221.8%22/%3E%3C/g%3E%3C/svg%3E") center top/22px 22px;-webkit-mask-image:radial-gradient(circle 280px at calc(75% - 32px) 100%,#000 0%,transparent 100%);mask-image:radial-gradient(circle 280px at calc(75% - 32px) 100%,#000 0%,transparent 100%)}
-.p-photo{display:block;margin:0 32px 0 auto;width:auto;height:auto;max-height:300px;max-width:72%;pointer-events:none;user-select:none;position:relative;z-index:0} /* in the flow so it sets the hero height; up to 72% wide so phones get a big photo with the face above the name (computers hit the 300px height cap first); 32px = card inset + corner radius */
+/* Profile hero. The photo is centred on the middle of the right half (face at 75% across), cropped by the screen edge,
+   and runs --pu (60px) down behind the record panel, fading out. The glow and cage texture also carry on behind
+   the card and fade, so there's no hard line where the hero meets the card. Quick stats top left, name along the bottom.
+   The hero ends where the record panel starts (negative margin cancels main's 28px gap); overflow-x:clip crops the
+   photo at the screen edge without making the page wider, while still letting things extend downwards. */
+.p-hero{--ph:clamp(300px,92vw,400px);--pu:60px;position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;min-height:calc(var(--ph) - var(--pu) + 8px);margin:0 -16px -28px;padding:16px 0 0;overflow-x:clip}
+.p-hero::before,.p-hero::after{content:"";position:absolute;inset:0 0 -280px;z-index:-1;pointer-events:none}
+.p-hero::before{background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22%3E%3Cg opacity=%22.1%22 fill=%22%23d5baff%22%3E%3Cpath d=%22M24 0H0V24%22 fill=%22none%22 stroke=%22%23d5baff%22 stroke-width=%221.2%22/%3E%3Ccircle cx=%220%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%220%22 cy=%2224%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%2224%22 r=%221.8%22/%3E%3C/g%3E%3C/svg%3E") center top/22px 22px;-webkit-mask-image:radial-gradient(ellipse 62% 270px at 75% calc(100% - 280px),#000 0%,transparent 100%);mask-image:radial-gradient(ellipse 62% 270px at 75% calc(100% - 280px),#000 0%,transparent 100%)}
+.p-hero::after{background:radial-gradient(ellipse 58% 250px at 75% calc(100% - 280px),rgba(140,60,255,.30),rgba(140,60,255,.12) 45%,rgba(140,60,255,0) 100%)}
+.p-photo{position:absolute;left:75%;bottom:calc(-1 * var(--pu));height:var(--ph);width:auto;max-width:none;translate:-50% 0;z-index:0;pointer-events:none;user-select:none;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - var(--pu) - 36px),transparent 100%);mask-image:linear-gradient(to bottom,#000 calc(100% - var(--pu) - 36px),transparent 100%)}
+/* Wider screens: the hero is the content column, not the screen, so keep the photo inside it and fade the glow and
+   cage out before the column's right edge instead of cutting them off. */
+@media (min-width:700px){
+  .p-photo{left:auto;right:24px;translate:none}
+  .p-hero::after{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 160px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 160px),transparent)}
+  .p-hero::before{-webkit-mask-image:radial-gradient(ellipse 62% 270px at 75% calc(100% - 280px),#000 0%,transparent 100%),linear-gradient(to right,#000 calc(100% - 160px),transparent);mask-image:radial-gradient(ellipse 62% 270px at 75% calc(100% - 280px),#000 0%,transparent 100%),linear-gradient(to right,#000 calc(100% - 160px),transparent);-webkit-mask-composite:source-in;mask-composite:intersect}
+}
 .p-id{position:absolute;left:20px;right:20px;bottom:20px;z-index:1}
 /* Soft dark glow behind the name, for contrast over the photo */
 .p-id::before{content:"";position:absolute;inset:-40px -20px -24px -36px;z-index:-1;pointer-events:none;background:radial-gradient(closest-side,rgba(10,9,13,.35),rgba(10,9,13,0) 90%)}
@@ -322,13 +334,10 @@ pre.recap{margin:0;padding:12px 14px;border-radius:12px;background:var(--surface
 /* Entrance animation (see animateIn in app.js): sections fade up once when a page opens */
 .rise{opacity:0;transform:translateY(14px)}
 .rise.in{opacity:1;transform:none;transition:opacity .5s ease var(--d,0ms),transform .5s cubic-bezier(.2,.7,.2,1) var(--d,0ms)}
-/* Profile photo rises 60px from behind the record panel as the header comes in */
+/* Profile photo rises 60px as the header comes in (it sits behind the record panel, which hides its lower part) */
 .p-hero.rise .p-photo{transform:translateY(60px);opacity:0}
 .p-hero.rise.in .p-photo{transform:none;opacity:1;transition:transform .8s cubic-bezier(.2,.7,.2,1) .1s,opacity .5s ease .1s}
-/* Clip the header at its bottom edge so the rising photo is hidden below the card line, even while the card is still fading in */
-.p-hero.rise{clip-path:inset(-200px -200px 0 -200px)}
 /* Profile quick stats, top left of the header: rank (big position, small "/total", Kanit), form */
-.p-hero .p-photo{align-self:flex-end;flex:none}
 .p-qs{position:absolute;top:16px;left:20px;z-index:1;margin:0;display:flex;flex-direction:column;gap:10px}
 .p-qs div{display:flex;align-items:center}
 .p-qs dd{margin:0;display:flex;align-items:baseline;color:var(--on-surface)}
