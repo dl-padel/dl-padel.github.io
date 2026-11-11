@@ -1085,7 +1085,7 @@ function recordPanel(r) {
 }
 // Profile photos, matched by player name for now (lowercase). Anyone without one gets the placeholder.
 // Photos are 640px-wide transparent WebPs, cropped head-and-shoulders to match each other.
-const PHOTOS = { "mitch": "mitch", "cally": "cally", "chris c": "chris-c", "ben s": "ben-s" };
+const PHOTOS = { "mitch": "mitch", "cally": "cally", "chris c": "chris-c", "ben s": "ben-s", "benji": "benji" };
 const playerPhoto = id => { const f = PHOTOS[(pname(id) || "").trim().toLowerCase()]; return f ? `img/players/${f}.webp` : "img/player-default.webp"; };
 // Fetch every player photo in the background (they're small) so profiles open with the photo ready.
 // The Image objects are kept so the downloads finish even if the page redraws.
