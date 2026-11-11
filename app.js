@@ -1148,7 +1148,8 @@ function renderPlayer(id) {
     h += recordPanel(r);
     const partners = Object.entries(r.partners).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || pname(a).localeCompare(pname(b)));
     const opps = Object.entries(r.opps).sort(([a, x], [b, y]) => y.P - x.P || y.L - x.L || pname(a).localeCompare(pname(b)));
-    const courts = Object.entries(r.courts).sort(([a, x], [b, y]) => y.P - x.P || y.W - x.W || a - b);
+    // Favourite court = most wins there; ties go to the better win rate, then most played (so with no wins yet, the most-played court).
+    const courts = Object.entries(r.courts).sort(([a, x], [b, y]) => y.W - x.W || y.W / y.P - x.W / x.P || y.P - x.P || a - b);
     h += `</section><section><div class="sec-h"><h2>Big Stats</h2></div><div class="stats two">`;
     if (partners[0]) { const [pid, x] = partners[0]; h += tile("Favourite partner", plink(pid), "handshake"); }
     if (opps[0]) { const [pid, x] = opps[0]; h += tile("Biggest rival", plink(pid), "swords"); }
