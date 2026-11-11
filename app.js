@@ -318,7 +318,11 @@ function wire() {
 
 // ----- Stat box values: as big as possible (up to 56px), shrunk only when a long name wouldn't fit on one line -----
 const STAT_MAX = 56;
+const KANIT = 'italic 900 56px "Kanit"';
 function fitStats() {
+  // Kanit is much wider than the fallback font: if it hasn't loaded yet, measure again once it has,
+  // otherwise names fitted in the fallback overflow (and get cut to "CAL…") when Kanit arrives.
+  if (document.fonts && !document.fonts.check(KANIT)) document.fonts.load(KANIT).then(() => fitStats()).catch(() => {});
   app.querySelectorAll(".stat b").forEach(b => {
     b.style.fontSize = STAT_MAX + "px";
     const r = document.createRange(); r.selectNodeContents(b);
@@ -327,8 +331,8 @@ function fitStats() {
     if (w > avail && avail > 0) b.style.fontSize = Math.floor(STAT_MAX * avail / w) + "px";
   });
 }
-// Re-fit once Kanit has loaded (first paint may use the fallback font) and when the screen size changes.
-document.fonts?.ready.then(fitStats);
+// Re-fit whenever a web font finishes loading (covers Kanit arriving after the Google Fonts CSS) and when the screen size changes.
+document.fonts?.addEventListener?.("loadingdone", () => fitStats());
 let fitTimer; addEventListener("resize", () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitStats, 100); });
 
 // ----- Entrance animation -----
@@ -1148,7 +1152,7 @@ function renderPlayer(id) {
     h += tile("Bagels served", r.bagS, "adjust");
     h += tile("Bagels eaten", r.bagE, "adjust");
     h += tile("Best win streak", r.best, "whatshot");
-    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", `Court ${esc(ct)}`, "pin"); }
+    if (courts[0]) { const [ct, x] = courts[0]; h += tile("Favourite court", esc(ct), "pin"); }
     h += `</div>`;
     h += `</section><section><div class="sec-h"><h2>Partners</h2></div><div class="card"><div class="tbl-wrap"><table class="lt"><thead><tr><th class="l">With</th><th>P</th><th>W</th><th>Win%</th></tr></thead><tbody>`
       + partners.map(([pid, x]) => `<tr><td class="team l">${plink(pid)}</td><td>${x.P}</td><td class="w">${x.W}</td><td>${pctText(x)}</td></tr>`).join("")
