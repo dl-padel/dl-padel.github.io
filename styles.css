@@ -187,7 +187,9 @@ tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color
 .stat .form{padding:0;gap:4px}
 .stats.two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}
 .sec-h + .stats{margin-top:0}
-.stat b .plink{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat b .sv{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} /* last-resort "…" only if fitting fails */
+.stat b .plink{white-space:nowrap}
+.stat b.fit .sv{overflow:visible;text-overflow:clip;flex:none;min-width:auto} /* while fitStats measures the full value */
 .stat b{min-width:0}
 /* Profile hero: big name, form, rank */
 /* Profile hero. The photo is centred on the middle of the right half (face at 75% across), cropped by the screen edge,

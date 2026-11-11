@@ -324,11 +324,14 @@ function fitStats() {
   // otherwise names fitted in the fallback overflow (and get cut to "CAL…") when Kanit arrives.
   if (document.fonts && !document.fonts.check(KANIT)) document.fonts.load(KANIT).then(() => fitStats()).catch(() => {});
   app.querySelectorAll(".stat b").forEach(b => {
+    const v = b.querySelector(".sv"); if (!v) return;
+    // Measure the value's own box with the "…" shortening switched off (.fit): Safari reports the
+    // already-shortened width if you measure the text, and the <b> box is always the full card width.
+    b.classList.add("fit");
     b.style.fontSize = STAT_MAX + "px";
-    const r = document.createRange(); r.selectNodeContents(b);
-    if (!r.getBoundingClientRect) return; // very old browsers: keep 56px
-    const w = r.getBoundingClientRect().width, avail = b.clientWidth;
+    const w = v.offsetWidth, avail = b.clientWidth * 0.97; // small margin for the italic overhang
     if (w > avail && avail > 0) b.style.fontSize = Math.floor(STAT_MAX * avail / w) + "px";
+    b.classList.remove("fit");
   });
 }
 // Re-fit whenever a web font finishes loading (covers Kanit arriving after the Google Fonts CSS) and when the screen size changes.
@@ -352,7 +355,7 @@ function animateIn() {
   // Snap bars to empty with no transition (otherwise they visibly shrink first), then re-enable it for the grow.
   bars.forEach(b => { b.dataset.w = b.style.width; b.style.transition = "none"; b.style.width = "0"; });
   if (bars.length) { void main.offsetWidth; bars.forEach(b => { b.style.transition = ""; }); }
-  const nums = [...main.querySelectorAll(".rp-v b, .stat b")].filter(b => /^\d+$/.test(b.textContent.trim()));
+  const nums = [...main.querySelectorAll(".rp-v b, .stat .sv")].filter(b => /^\d+$/.test(b.textContent.trim()));
   nums.forEach(b => { b.dataset.n = b.textContent.trim(); b.textContent = "0"; });
   const countUp = el => {
     const end = +el.dataset.n, t0 = performance.now(), dur = 800;
@@ -1127,7 +1130,7 @@ function renderPlayer(id) {
   if (S.leagueError) h += leagueGateMsg();
   const st = leagueStats(), r = st.players[id];
   // Stat box: small icon top left, the stat large at the bottom, its label under it.
-  const tile = (label, value, icon, hot) => `<div class="stat${hot ? " hot" : ""}"><span class="ms" aria-hidden="true">${icon}</span><b class="num">${value}</b><small>${label}</small></div>`;
+  const tile = (label, value, icon, hot) => `<div class="stat${hot ? " hot" : ""}"><span class="ms" aria-hidden="true">${icon}</span><b class="num"><span class="sv">${value}</span></b><small>${label}</small></div>`;
 
   // Hero: quick stats top left (rank "1/13" with the position large, then form; labels for screen readers only),
   // photo bottom right on the purple glow and cage texture, big name (with a flame when on fire) along the bottom.
