@@ -199,8 +199,6 @@ tr.sep td{text-align:left;font-size:12px;line-height:16px;padding:8px 16px;color
 .p-hero::before{background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22%3E%3Cg opacity=%22.1%22 fill=%22%23d5baff%22%3E%3Cpath d=%22M24 0H0V24%22 fill=%22none%22 stroke=%22%23d5baff%22 stroke-width=%221.2%22/%3E%3Ccircle cx=%220%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%220%22 r=%221.8%22/%3E%3Ccircle cx=%220%22 cy=%2224%22 r=%221.8%22/%3E%3Ccircle cx=%2224%22 cy=%2224%22 r=%221.8%22/%3E%3C/g%3E%3C/svg%3E") center top/22px 22px;-webkit-mask-image:radial-gradient(ellipse 62% 220px at 75% calc(100% - 220px),#000 0%,transparent 100%);mask-image:radial-gradient(ellipse 62% 220px at 75% calc(100% - 220px),#000 0%,transparent 100%)}
 .p-hero::after{background:radial-gradient(ellipse 58% 220px at 75% calc(100% - 220px),rgba(140,60,255,.30),rgba(140,60,255,.12) 45%,rgba(140,60,255,0) 100%)}
 .p-photo{position:absolute;left:75%;bottom:calc(-1 * var(--pu));height:var(--ph);width:auto;max-width:none;translate:-50% 0;z-index:0;pointer-events:none;user-select:none;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - var(--fade)),transparent 100%);mask-image:linear-gradient(to bottom,#000 calc(100% - var(--fade)),transparent 100%)}
-/* The grey silhouette for players without a photo is an older, tighter crop: keep it smaller so its head stays clear of the name */
-.p-photo.default{height:calc(var(--ph) * .74);bottom:0}
 /* Wider screens: the hero is the content column, not the screen, so keep the photo inside it and fade the glow and
    cage out before the column's right edge instead of cutting them off. */
 @media (min-width:700px){
